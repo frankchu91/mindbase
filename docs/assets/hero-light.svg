@@ -1,0 +1,56 @@
+<svg width="920" height="430" viewBox="0 0 920 430" fill="none" xmlns="http://www.w3.org/2000/svg" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#57606a"/>
+    </marker>
+  </defs>
+
+  <!-- Panel 1: You feed it -->
+  <rect x="10" y="50" width="260" height="250" rx="10" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="30" y="86" font-size="13" font-weight="700" letter-spacing="1.5" fill="#8250df">YOU FEED IT</text>
+  <text x="30" y="122" font-size="14.5" fill="#1f2328">raw thoughts</text>
+  <text x="30" y="150" font-size="14.5" fill="#1f2328">papers &amp; PDFs</text>
+  <text x="30" y="178" font-size="14.5" fill="#1f2328">URLs &amp; pastes</text>
+  <line x1="30" y1="204" x2="250" y2="204" stroke="#d0d7de" stroke-width="1"/>
+  <text x="30" y="234" font-size="13.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="#1f2328">sources/</text>
+  <text x="30" y="258" font-size="12.5" fill="#57606a">append-only — never rewritten</text>
+
+  <!-- Arrow 1 -->
+  <line x1="276" y1="175" x2="322" y2="175" stroke="#57606a" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <text x="300" y="158" font-size="12" fill="#57606a" text-anchor="middle">contribute</text>
+
+  <!-- Panel 2: The LLM gardens -->
+  <rect x="330" y="50" width="260" height="250" rx="10" fill="#f6f8fa" stroke="#8250df" stroke-width="1.5"/>
+  <text x="350" y="86" font-size="13" font-weight="700" letter-spacing="1.5" fill="#8250df">THE LLM GARDENS</text>
+  <text x="350" y="122" font-size="14.5" fill="#1f2328">reads every source</text>
+  <text x="350" y="150" font-size="14.5" fill="#1f2328">cross-references pages</text>
+  <text x="350" y="178" font-size="14.5" fill="#1f2328">flags contradictions</text>
+  <text x="350" y="206" font-size="14.5" fill="#1f2328">writes &amp; updates the wiki</text>
+  <line x1="350" y1="232" x2="570" y2="232" stroke="#d0d7de" stroke-width="1"/>
+  <text x="350" y="260" font-size="12.5" fill="#57606a">between your conversations,</text>
+  <text x="350" y="280" font-size="12.5" fill="#57606a">not at query time</text>
+
+  <!-- Arrow 2 -->
+  <line x1="596" y1="175" x2="642" y2="175" stroke="#57606a" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <text x="620" y="160" font-size="12.5" fill="#57606a" text-anchor="middle">build</text>
+
+  <!-- Panel 3: Your wiki compounds -->
+  <rect x="650" y="50" width="260" height="250" rx="10" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="670" y="86" font-size="13" font-weight="700" letter-spacing="1.5" fill="#8250df">YOUR WIKI COMPOUNDS</text>
+  <text x="670" y="122" font-size="13.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="#1f2328">context.md</text>
+  <text x="670" y="141" font-size="12.5" fill="#57606a">the current synthesized truth</text>
+  <text x="670" y="172" font-size="13.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="#1f2328">research/*.md</text>
+  <text x="670" y="191" font-size="12.5" fill="#57606a">concept pages, [[wikilinked]]</text>
+  <text x="670" y="222" font-size="13.5" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="#1f2328">logs/</text>
+  <text x="670" y="241" font-size="12.5" fill="#57606a">every operation, auditable</text>
+  <line x1="670" y1="262" x2="890" y2="262" stroke="#d0d7de" stroke-width="1"/>
+  <text x="670" y="286" font-size="12.5" fill="#57606a">plain markdown, on your disk</text>
+
+  <!-- Return path: ask -->
+  <path d="M 780 300 L 780 355 L 148 355 L 148 308" stroke="#8250df" stroke-width="1.8" fill="none" marker-end="url(#arrow)" stroke-dasharray="none"/>
+  <rect x="330" y="341" width="268" height="28" rx="14" fill="#ffffff" stroke="#8250df" stroke-width="1"/>
+  <text x="464" y="359" font-size="12.5" fill="#8250df" text-anchor="middle" font-weight="600">ask → cited answer, already synthesized</text>
+
+  <!-- Footer -->
+  <text x="460" y="412" font-size="13" fill="#57606a" text-anchor="middle">No cloud. No vector DB. Works in Claude Code · Cursor · Windsurf · Cline · any MCP client</text>
+</svg>
