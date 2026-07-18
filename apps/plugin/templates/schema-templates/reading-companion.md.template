@@ -1,0 +1,59 @@
+---
+# MindBase project settings — the structured layer the LLM parses first.
+
+ingest:
+  discuss_takeaways: true          # keep on; user reads chapter-by-chapter, talk about it
+  require_citations: true          # cite chapter for every appearance
+  auto_classify_folders: false     # natural folders: characters/, places/, themes/
+  target_pages_per_source: 4       # one chapter ≠ many new entities
+
+linking:
+  edge_types: [appears-with, travels-to, possesses, opposes, related-theme]
+
+lint:
+  stale_after_days: 365            # book wikis age slowly
+
+query:
+  offer_to_file_back: true
+---
+
+# Wiki Schema — Reading Companion
+
+## Project description
+
+Build a Tolkien-Gateway-style wiki for a book (or book series) as you
+read. Sources are the chapters themselves, plus secondary material
+(letters, essays, interviews).
+
+## Page conventions
+
+Wiki/concepts pages:
+- H1 = canonical entity name (character, place, event, theme).
+- One sentence definition ("Frodo Baggins is a hobbit of the Shire…").
+- ## Appearances — bulleted chapter references with [[raw:<chapter-id>]].
+- ## Notes — interpretive observations.
+
+## Page types
+- Character
+- Place
+- Event / Plot point
+- Theme / Concept
+- Object / Artifact
+
+## Linking conventions
+
+Use the typed edges aggressively:
+- `appears-with` for characters in the same scene
+- `travels-to` for movement between places
+- `possesses` for objects / artifacts owned
+- `opposes` for adversarial relationships
+- `related-theme` for thematic resonance across plot lines
+
+## Ingest guidance
+
+- **Don't spoil ahead** of where the user has read. Track the reading
+  position via the project's notes layer; only reference chapters at or
+  before that position.
+- Prefer **adding to existing pages** over creating new ones for one-off mentions.
+- For minor characters (one scene appearance), add an entry in the page
+  for the major character they appear with rather than creating a new page.

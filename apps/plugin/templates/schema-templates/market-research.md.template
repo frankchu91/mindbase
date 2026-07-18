@@ -1,0 +1,56 @@
+---
+# MindBase project settings — the structured layer the LLM parses first.
+# Comments explain each field. Defaults shown.
+
+ingest:
+  discuss_takeaways: true          # Karpathy step 4 (recommend leaving true)
+  require_citations: true          # every claim cited with [[raw:<id>]]
+  auto_classify_folders: false     # sort new pages into folders (see SKILL §6.5)
+  target_pages_per_source: 6       # market notes are usually company-bounded
+
+linking:
+  edge_types: [competes-with, acquired-by, partners-with, built-on, cites]
+
+lint:
+  stale_after_days: 90             # market data ages fast; consider 30-60 for active markets
+
+query:
+  offer_to_file_back: true
+---
+
+# Wiki Schema — Market Research
+
+## Project description
+
+Track companies, products, and the competitive landscape in a market.
+Sources are press releases, product pages, analyst reports, earnings calls,
+news articles.
+
+## Page conventions
+
+Wiki/concepts pages:
+- H1 = canonical company / product / feature name.
+- ## Snapshot — 2-3 sentence definitional paragraph (what they are, who they sell to).
+- ## Key facts — bulleted (HQ, employees, funding, ARR if known) with [[raw:<id>]] citations.
+- ## Positioning — how they describe themselves.
+- ## Comparisons — links to direct competitors via [[other-company]].
+
+## Page types
+- Company
+- Product
+- Feature (cross-cutting)
+- Market segment / category
+
+## Linking conventions
+
+Use the typed edges aggressively. Common usage:
+- `competes-with` between direct competitors in the same segment
+- `acquired-by` when an M&A is sourced
+- `partners-with` for explicit integrations / co-sell relationships
+- `built-on` when company A's product relies on company B's tech
+
+## Ingest guidance
+
+- For press releases / blog posts: create or update the relevant Company page.
+- For analyst reports: extract company-level facts, link cross-company comparisons.
+- For earnings calls: focus on metrics (ARR, growth, churn) and forward guidance.

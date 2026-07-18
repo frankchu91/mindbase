@@ -1,0 +1,58 @@
+---
+# MindBase project settings — the structured layer the LLM parses first.
+
+ingest:
+  discuss_takeaways: true          # critical for investigations — pause + verify before writing
+  require_citations: true          # every claim cited with [[raw:<id>]] — non-negotiable
+  auto_classify_folders: false     # sort entities into folders (e.g. people/, orgs/, events/)
+  target_pages_per_source: 5       # case files are usually 1-source-per-entity
+
+linking:
+  edge_types: [met-with, worked-at, witnessed, mentioned-in, contradicts]
+
+lint:
+  stale_after_days: 120
+
+query:
+  offer_to_file_back: true
+---
+
+# Wiki Schema — Investigation
+
+## Project description
+
+Build a case file: people, places, organizations, events, evidence, and
+the timeline that ties them together. Sources can be transcripts,
+documents, news, court filings, photos.
+
+## Page conventions
+
+Wiki/concepts pages:
+- H1 = entity name (Person, Place, Org, Event).
+- ## Identity — who/what is this, basic identifying facts.
+- ## Timeline — bulleted chronological entries cited with [[raw:<id>]].
+- ## Connections — links to related entities ([[other-entity]]).
+- ## Open questions — what's still uncertain.
+
+## Page types
+- Person
+- Organization
+- Place
+- Event
+- Document / Evidence item
+
+## Linking conventions
+
+Use the typed edges aggressively:
+- `met-with` for personal interactions documented in a source
+- `worked-at` for employment / affiliation
+- `witnessed` when a person is documented as having seen an event
+- `mentioned-in` for non-trivial textual references in evidence
+- `contradicts` — **never smooth contradictions over**. If two sources disagree, both get the edge and the contradiction is documented on a notes page.
+
+## Ingest guidance
+
+- Every claim cited with [[raw:<id>]]. No exceptions.
+- Flag contradictions between sources — don't smooth them over.
+- Timeline entries should include date when known (ISO format: YYYY-MM-DD).
+- For evidence items (photos, documents), create a Document page with provenance.

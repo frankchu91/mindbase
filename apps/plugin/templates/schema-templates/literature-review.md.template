@@ -1,0 +1,54 @@
+---
+# MindBase project settings — the structured layer the LLM parses first.
+
+ingest:
+  discuss_takeaways: true          # Karpathy step 4
+  require_citations: true          # every claim cited with [[raw:<id>]]
+  auto_classify_folders: false     # sort new pages into folders (see SKILL §6.5)
+  target_pages_per_source: 12      # survey papers especially — extract aggressively
+
+linking:
+  edge_types: [cites, contradicts, supersedes, elaborates]
+
+lint:
+  stale_after_days: 180            # papers age slowly; 6 months before stale
+
+query:
+  offer_to_file_back: true
+---
+
+# Wiki Schema — Literature Review
+
+## Project description
+
+Sustained inquiry into a research topic via papers, articles, and notes.
+Sources are mostly PDFs and arxiv links; output is a wiki of methods,
+findings, and an evolving thesis.
+
+## Page conventions
+
+Wiki/concepts pages:
+- H1 = canonical concept name (e.g. "Retrieval-Augmented Generation").
+- One opening paragraph defining the concept.
+- ## Key claims — bulleted, each cited inline with [[raw:<id>]].
+- ## Methods (when applicable).
+- ## Open questions.
+
+## Page types
+- Concept (algorithm, method, theory)
+- Paper (single citation, includes Abstract / Method / Result sections)
+- Researcher / Author
+
+## Linking conventions
+
+Use the typed edges aggressively:
+- `cites` for fact-based claims with explicit source
+- `contradicts` only when both sides have explicit citations on the same question
+- `supersedes` when a newer method replaces an older one (note the year)
+- `elaborates` when this page goes deeper than the linked page
+
+## Ingest guidance
+
+- For survey papers: extract aggressively — 10-20 concept pages is healthy.
+- For single-finding papers: 2-4 concept pages is enough.
+- For position pieces / opinion articles: usually 1-2 pages + heavy linking to existing concepts.

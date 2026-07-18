@@ -1,0 +1,54 @@
+---
+# MindBase project settings — the structured layer the LLM parses first.
+
+ingest:
+  discuss_takeaways: true          # generic catch-all benefits from confirming intent
+  require_citations: true          # even loose tracking needs sources
+  auto_classify_folders: false     # topic-tracker is too generic to auto-classify well
+  target_pages_per_source: 3       # favor depth over breadth
+
+linking:
+  edge_types: [related-to]         # start minimal; add specific edges as patterns emerge
+
+lint:
+  stale_after_days: 60             # tighter — catches abandoned threads
+
+query:
+  offer_to_file_back: true
+---
+
+# Wiki Schema — Topic Tracker
+
+## Project description
+
+Generic open-ended catch-all. Use this when none of the more specific
+templates fits — e.g. tracking a hobby, an ongoing interest, a community
+you follow.
+
+## Page conventions
+
+Use whatever convention feels right. The defaults:
+- H1 = canonical concept / entity name.
+- Opening paragraph defines it.
+- ## Sources — citations as [[raw:<id>]].
+- ## Notes — your own observations.
+
+## Page types
+- Topic
+- Entity (person, place, thing)
+- Event / Update
+
+## Linking conventions
+
+Start with `related-to` as the only edge type. As patterns emerge from
+the user's actual usage (e.g. they keep wanting to express "X led to Y"),
+add new edge types to `linking.edge_types` in frontmatter and document
+the semantics here.
+
+## Ingest guidance
+
+- **Don't over-extract** from a single source — favor depth over breadth.
+- **Skip pages that would only have one source** — fold them into existing pages.
+- For news-style updates (event happened, project shipped), prefer
+  appending to an Update log on an existing entity page rather than
+  creating a standalone Event page.
