@@ -1,0 +1,17 @@
+{
+  "name": "@mindbase/plugin",
+  "version": "0.1.0",
+  "description": "MindBase Claude Code plugin — Karpathy LLM-Wiki pattern, productized.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bash scripts/build-mcp-bundle.sh",
+    "verify": "bash scripts/verify-plugin.sh",
+    "typecheck": "echo 'plugin has no TS source; tools live in apps/mcp'"
+  },
+  "dependencies": {
+    "mindbase-mcp": "workspace:*"
+  },
+  "author": "Haobing Chu <haobing0304@gmail.com>",
+  "license": "MIT"
+}
