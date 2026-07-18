@@ -1,0 +1,10 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+# Gradle wrapper jar — not committed; run `gradle wrapper --gradle-version 8.7` to generate
+gradle/wrapper/gradle-wrapper.jar

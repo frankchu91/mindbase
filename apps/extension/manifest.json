@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "MindBase Web Clipper",
+  "version": "0.0.1",
+  "description": "Save web pages to your MindBase knowledge base",
+  "permissions": ["activeTab", "scripting"],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Save to MindBase"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}

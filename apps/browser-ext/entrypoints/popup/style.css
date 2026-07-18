@@ -1,0 +1,445 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #ffffff;
+  --surface: #f5f5f5;
+  --border: #d1d5db;
+  --text: #111827;
+  --text-muted: #6b7280;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-text: #ffffff;
+  --danger: #dc2626;
+  --success: #16a34a;
+  --radius: 8px;
+  --font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Status badge backgrounds */
+  --badge-queued-bg: #fef9c3;
+  --badge-queued-text: #854d0e;
+  --badge-processing-bg: #dbeafe;
+  --badge-processing-text: #1d4ed8;
+  --badge-compiled-bg: #dcfce7;
+  --badge-compiled-text: #166534;
+  --badge-failed-bg: #fee2e2;
+  --badge-failed-text: #991b1b;
+  --badge-pending-bg: #f3f4f6;
+  --badge-pending-text: #374151;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --border: #374151;
+    --text: #f9fafb;
+    --text-muted: #9ca3af;
+    --primary: #6366f1;
+    --primary-hover: #5a5fcf;
+    --primary-text: #ffffff;
+    --danger: #f87171;
+    --success: #4ade80;
+
+    --badge-queued-bg: #422006;
+    --badge-queued-text: #fde68a;
+    --badge-processing-bg: #1e3a5f;
+    --badge-processing-text: #93c5fd;
+    --badge-compiled-bg: #14532d;
+    --badge-compiled-text: #86efac;
+    --badge-failed-bg: #4c0519;
+    --badge-failed-text: #fca5a5;
+    --badge-pending-bg: #1f2937;
+    --badge-pending-text: #9ca3af;
+  }
+}
+
+body {
+  width: 390px;
+  min-height: 200px;
+  font-family: var(--font);
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text);
+  padding: 12px;
+}
+
+/* Not-paired empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.empty-state p {
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ── Recent section (below form) ─────────────────────────────────────────── */
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 10px 0 8px;
+}
+
+.recent-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recent-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+.capture-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.capture-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: var(--surface);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.capture-card:hover {
+  border-color: var(--primary);
+  background: var(--bg);
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 2px;
+}
+
+/* Inline title sits between badge and time in the card-top row */
+.card-title-inline {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.card-time {
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.card-error {
+  font-size: 11px;
+  color: var(--danger);
+  margin-bottom: 3px;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 16px;
+}
+
+/* Dismiss (✕) icon button */
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover {
+  color: var(--danger);
+  background: var(--badge-failed-bg);
+}
+
+/* Status badges */
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+.badge-queued {
+  background: var(--badge-queued-bg);
+  color: var(--badge-queued-text);
+}
+
+.badge-processing {
+  background: var(--badge-processing-bg);
+  color: var(--badge-processing-text);
+}
+
+.badge-compiled {
+  background: var(--badge-compiled-bg);
+  color: var(--badge-compiled-text);
+}
+
+.badge-failed {
+  background: var(--badge-failed-bg);
+  color: var(--badge-failed-text);
+}
+
+.badge-pending {
+  background: var(--badge-pending-bg);
+  color: var(--badge-pending-text);
+}
+
+.empty-hint {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 24px 0;
+}
+
+.polling-hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  font-style: italic;
+}
+
+/* ── Form view ────────────────────────────────────────────────────────────── */
+
+.capture-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+input[type='text'],
+textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+input[type='text']:focus,
+textarea:focus {
+  border-color: var(--primary);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+/* Mode pills */
+.mode-pills {
+  display: flex;
+  gap: 6px;
+}
+
+.mode-pill {
+  flex: 1;
+  padding: 6px 0;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.mode-pill:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.mode-pill.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-text);
+}
+
+/* Voice section */
+.voice-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.record-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary);
+  color: var(--primary-text);
+  font-size: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.record-btn:hover {
+  background: var(--primary-hover);
+  transform: scale(1.05);
+}
+
+.record-btn.recording {
+  background: var(--danger);
+  animation: pulse 1.2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(220, 38, 38, 0); }
+}
+
+.voice-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Buttons */
+.btn {
+  padding: 9px 16px;
+  border: none;
+  border-radius: var(--radius);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--primary-text);
+  width: 100%;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.btn-secondary:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* Status message (inline form feedback) */
+.status {
+  font-size: 12px;
+  text-align: center;
+  min-height: 18px;
+  font-weight: 500;
+}
+
+.status.saving {
+  color: var(--text-muted);
+}
+
+.status.success {
+  color: var(--success);
+}
+
+.status.error {
+  color: var(--danger);
+}
+
+/* Bare hr reset — actual divider styling is on .divider */
+hr {
+  border: none;
+}

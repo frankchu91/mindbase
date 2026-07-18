@@ -1,0 +1,93 @@
+name: MindBase
+options:
+  bundleIdPrefix: app.mindbase
+  deploymentTarget:
+    iOS: "17.0"
+  developmentLanguage: en
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+targets:
+  MindBase:
+    type: application
+    platform: iOS
+    sources:
+      - path: MindBase
+    info:
+      path: MindBase/Info.plist
+      properties:
+        CFBundleDisplayName: MindBase
+        UILaunchScreen: {}
+        NSMicrophoneUsageDescription: "MindBase records voice memos to capture into your wiki."
+        NSCameraUsageDescription: "MindBase scans QR codes to pair with your server."
+    entitlements:
+      path: MindBase/MindBase.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.app.mindbase
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.mindbase.ios
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: NO
+    dependencies:
+      - target: ShareExtension
+        embed: true
+        codeSign: true
+  MindBaseUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: MindBaseUITests
+    info:
+      path: MindBaseUITests/Info.plist
+      properties:
+        CFBundleName: MindBaseUITests
+    dependencies:
+      - target: MindBase
+    settings:
+      base:
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        SWIFT_VERSION: "5.9"
+        PRODUCT_BUNDLE_IDENTIFIER: app.mindbase.ios.uitests
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1,2"
+        TEST_TARGET_NAME: MindBase
+  ShareExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ShareExtension
+      - path: MindBase/KeychainStore.swift
+      - path: MindBase/APIClient.swift
+    info:
+      path: ShareExtension/Info.plist
+      properties:
+        CFBundleDisplayName: MindBase
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsWebPageWithMaxCount: 1
+              NSExtensionActivationSupportsText: true
+              NSExtensionActivationSupportsImageWithMaxCount: 1
+    entitlements:
+      path: ShareExtension/ShareExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.app.mindbase
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.mindbase.ios.share
+        TARGETED_DEVICE_FAMILY: "1,2"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        SWIFT_VERSION: "5.9"
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+        SKIP_INSTALL: NO

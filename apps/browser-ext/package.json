@@ -1,0 +1,24 @@
+{
+  "name": "@mindbase/browser-ext",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "wxt build",
+    "build:firefox": "wxt build -b firefox",
+    "zip": "wxt zip",
+    "zip:firefox": "wxt zip -b firefox",
+    "typecheck": "tsc --noEmit",
+    "pretest:e2e": "wxt build",
+    "test:e2e": "playwright test --config playwright.config.ts",
+    "test:install": "playwright install --with-deps chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/chrome": "^0.0.270",
+    "typescript": "^5.6.3",
+    "wxt": "^0.20.25"
+  }
+}
