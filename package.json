@@ -1,0 +1,24 @@
+{
+  "name": "mindbase",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r --workspace-concurrency=1 test",
+    "test:e2e": "pnpm -F @mindbase/server test:e2e",
+    "test:web": "pnpm -F @mindbase/web playwright test",
+    "test:mcp": "cd apps/mcp && node test/full-smoke.mjs && node test/tools-call.mjs",
+    "test:ext": "pnpm -F @mindbase/browser-ext test:e2e",
+    "build:plugin": "pnpm -F @mindbase/plugin build",
+    "verify:plugin": "pnpm -F @mindbase/plugin verify",
+    "test:ios": "bash apps/ios/test.sh",
+    "test:all": "pnpm test && pnpm test:e2e && pnpm test:mcp && pnpm test:ext",
+    "dev": "pnpm --filter @mindbase/web dev",
+    "typecheck": "pnpm -r typecheck",
+    "start": "pnpm -F @mindbase/web build && pnpm -F @mindbase/server start"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  },
+  "packageManager": "pnpm@10.28.0"
+}

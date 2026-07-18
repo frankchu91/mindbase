@@ -1,0 +1,23 @@
+node_modules
+dist
+.DS_Store
+test-results/
+*.traineddata
+.env
+.env.local
+.vite
+coverage
+*.log
+.turbo
+*.tsbuildinfo
+.superpowers/
+docs/superpowers/
+
+# User data (never commit)
+mindbase-data/
+mindbase.config.json
+atlas-data/
+atlas.config.json
+
+# Local settings
+.claude/

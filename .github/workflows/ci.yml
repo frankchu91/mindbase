@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build core
+        run: pnpm --filter @mindbase/core build
+
+      - name: Test core
+        run: pnpm --filter @mindbase/core test
+
+      - name: Build MCP server
+        run: pnpm --filter mindbase-mcp build
+
+      - name: MCP server boots
+        run: node apps/mcp/dist/cli.js < /dev/null
+
+      - name: Test server
+        run: pnpm --filter @mindbase/server test
+
+      - name: Typecheck web
+        run: pnpm --filter @mindbase/web typecheck
+
+      - name: Build web
+        run: pnpm --filter @mindbase/web build

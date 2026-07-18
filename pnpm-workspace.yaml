@@ -1,0 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+
+onlyBuiltDependencies:
+  - argon2
+  - tesseract.js
+  - sharp
+  - esbuild
+  - protobufjs
+  - better-sqlite3
