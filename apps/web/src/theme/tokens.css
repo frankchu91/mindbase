@@ -1,0 +1,142 @@
+/* ═══════════════════════════════════════════════════════════════════════
+ * Agent + Canvas theme tokens — Apple Light + B-Dark
+ * Source of truth: docs/superpowers/specs/2026-05-22-agent-canvas-redesign-design.md
+ * Mirrors /tmp/mindbase-p6-v2.html lines 69–130 (approved 2026-05-22).
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+:root[data-theme="light"] {
+  --win-bg: rgba(255,255,255,0.96);
+  --titlebar-bg: rgba(238,238,238,0.78);
+  --dock-bg: rgba(246,246,246,0.55);
+  --dock-solid: #f6f6f6;
+  --chat-bg: rgba(252,252,252,0.85);
+  --canvas-bg: #ffffff;
+  --toolbar-bg: rgba(255,255,255,0.78);
+  --statusbar-bg: rgba(242,242,242,0.85);
+  --hairline: rgba(0,0,0,0.10);
+  --hairline-soft: rgba(0,0,0,0.06);
+  --row-hover: rgba(0,0,0,0.045);
+  --row-selected: #007AFF;
+  --text-on-selected: #ffffff;
+  --bg-2: rgba(0,0,0,0.04);
+  --bg-3: rgba(0,0,0,0.07);
+  --input-bg: rgba(0,0,0,0.025);
+  --text-title: #1d1d1f;
+  --text-high: #1d1d1f;
+  --text-default: #1d1d1f;
+  --text-mid: #6e6e73;
+  --text-faint: #98989d;
+  --accent: #007AFF;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(0,122,255,0.10);
+  --accent-deep: #0051D5;
+  --warn: #b8651a;
+  --warn-soft: rgba(184,101,26,0.10);
+  --live: #f59e0b;
+  --live-soft: rgba(245,158,11,0.10);
+  --good: #22c55e;
+}
+
+:root[data-theme="dark"] {
+  --win-bg: rgba(22,19,17,0.97);
+  --titlebar-bg: rgba(34,29,24,0.78);
+  --dock-bg: rgba(34,29,24,0.6);
+  --dock-solid: #221d18;
+  --chat-bg: rgba(28,23,19,0.85);
+  --canvas-bg: linear-gradient(180deg, #161311 0%, #221d18 100%);
+  --toolbar-bg: rgba(22,19,17,0.78);
+  --statusbar-bg: rgba(22,19,17,0.85);
+  --hairline: rgba(255,255,255,0.08);
+  --hairline-soft: rgba(255,255,255,0.05);
+  --row-hover: rgba(255,255,255,0.05);
+  --row-selected: rgba(249,115,22,0.85);
+  --text-on-selected: #ffffff;
+  --bg-2: rgba(255,255,255,0.05);
+  --bg-3: rgba(255,255,255,0.08);
+  --input-bg: rgba(0,0,0,0.30);
+  --text-title: #f4f0eb;
+  --text-high: #f4f0eb;
+  --text-default: #d6cfc4;
+  --text-mid: #948a7e;
+  --text-faint: #6b6358;
+  --accent: #f97316;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(249,115,22,0.14);
+  --accent-deep: #c2410c;
+  --warn: #eab308;
+  --warn-soft: rgba(234,179,8,0.12);
+  --live: #facc15;
+  --live-soft: rgba(250,204,21,0.12);
+  --good: #4ade80;
+}
+
+/* Default to light if no attribute set (the shell-state store sets it on mount,
+   but this avoids a flash-of-undefined-styles during the first paint). */
+:root:not([data-theme]) {
+  --win-bg: rgba(255,255,255,0.96);
+  --titlebar-bg: rgba(238,238,238,0.78);
+  --dock-bg: rgba(246,246,246,0.55);
+  --dock-solid: #f6f6f6;
+  --chat-bg: rgba(252,252,252,0.85);
+  --canvas-bg: #ffffff;
+  --toolbar-bg: rgba(255,255,255,0.78);
+  --statusbar-bg: rgba(242,242,242,0.85);
+  --hairline: rgba(0,0,0,0.10);
+  --hairline-soft: rgba(0,0,0,0.06);
+  --row-hover: rgba(0,0,0,0.045);
+  --row-selected: #007AFF;
+  --text-on-selected: #ffffff;
+  --bg-2: rgba(0,0,0,0.04);
+  --bg-3: rgba(0,0,0,0.07);
+  --input-bg: rgba(0,0,0,0.025);
+  --text-title: #1d1d1f;
+  --text-high: #1d1d1f;
+  --text-default: #1d1d1f;
+  --text-mid: #6e6e73;
+  --text-faint: #98989d;
+  --accent: #007AFF;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(0,122,255,0.10);
+  --accent-deep: #0051D5;
+  --warn: #b8651a;
+  --warn-soft: rgba(184,101,26,0.10);
+  --live: #f59e0b;
+  --live-soft: rgba(245,158,11,0.10);
+  --good: #22c55e;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Stage + window — the floating macOS-style window centered on a warm
+ * gradient backdrop. Mirrors /tmp/mindbase-p6-v2.html .stage / .window.
+ * Without this frame the inner panel hairlines disappear visually because
+ * there's no contrast against an outer surface.
+ * ═══════════════════════════════════════════════════════════════════════ */
+.mb-stage {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 24px;
+  transition: background 300ms ease;
+}
+:root[data-theme="light"] .mb-stage {
+  background: linear-gradient(135deg, #fef7ed 0%, #fde4cf 35%, #f5b8a3 70%, #d68678 100%);
+}
+:root[data-theme="dark"] .mb-stage {
+  background: linear-gradient(135deg, #1f1611 0%, #2b1d14 50%, #1a0f0a 100%);
+}
+
+.mb-window {
+  width: 100%;
+  max-width: 1340px;
+  height: calc(100vh - 40px);
+  min-height: 720px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 0.5px rgba(0,0,0,0.16),
+    0 1px 2px rgba(0,0,0,0.10),
+    0 12px 40px rgba(0,0,0,0.25),
+    0 30px 90px rgba(0,0,0,0.30);
+}
