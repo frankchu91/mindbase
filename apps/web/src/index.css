@@ -1,0 +1,496 @@
+/* @import statements MUST come before @tailwind directives — PostCSS
+   silently drops imports that appear after other at-rules, which was
+   making tokens.css invisible in the production bundle. */
+@import './theme/tokens.css';
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * COLOR TOKENS — restored to the original "atmospheric" palette.
+ * (Azure + amber gradient over deep navy → ember linear gradient.)
+ *
+ * Other UI Reset improvements (commits 2-5) are preserved:
+ *   - Lucide icons (no emoji)
+ *   - Sidebar icon-row footer
+ *   - .menu-item / .icon-button / .focus-ring / .press-scale state utilities
+ *   - .skeleton + .pane-fade-in animations
+ *   - Inter UI + editor font
+ *   - --radius-* / --shadow-* / --duration-* / --ease-* tokens
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ─── Fonts ─── */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+
+  /* ─── Atmospheric foundation (5-stop linear gradient via .atmosphere) ─── */
+  --bg-base:      #050b1a;
+  --bg-mid:       #0a1832;
+  --bg-upper:     #0e2040;
+  --bg-horizon:   #1a1e3a;
+  --bg-ember:     #2a1e2a;
+
+  /* ─── Glow stops for atmosphere layer ─── */
+  --glow-azure:   rgba(80, 140, 220, 0.18);
+  --glow-amber:   rgba(255, 150, 100, 0.15);
+
+  /* ─── Glass surfaces ─── */
+  --surface-0:    rgba(8, 12, 24, 0.55);
+  --surface-1:    rgba(255, 255, 255, 0.04);
+  --surface-2:    rgba(255, 255, 255, 0.05);
+  --surface-3:    rgba(255, 255, 255, 0.08);
+
+  /* ─── Borders ─── */
+  --border-subtle:  rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-strong:  rgba(255, 255, 255, 0.12);
+  --border-focus:   rgba(128, 180, 255, 0.5);
+
+  /* ─── Text ─── */
+  --text-high:    #f4f6fa;
+  --text-default: rgba(255, 255, 255, 0.85);
+  --text-mid:     rgba(255, 255, 255, 0.65);
+  --text-low:     rgba(255, 255, 255, 0.45);
+  --text-faint:   rgba(255, 255, 255, 0.25);
+  --text-inverse: #0a1020;
+
+  /* ─── Accents (the warm pair) ─── */
+  --accent-amber: #ffb088;
+  --accent-azure: #80b4ff;
+
+  /* ─── Shadows ─── */
+  --shadow-glow-azure: 0 0 12px rgba(128, 180, 255, 0.5);
+  --shadow-glow-amber: 0 0 20px rgba(255, 150, 100, 0.3);
+  --shadow-glow-mark:  0 0 50px rgba(128, 180, 255, 0.4), 0 0 100px rgba(255, 150, 100, 0.2);
+  --shadow-card:       0 10px 40px rgba(0, 0, 0, 0.3);
+
+  /* ─── 3-level shadow scale (kept from commit 1, used by new components) ─── */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.6), 0 4px 12px rgba(0, 0, 0, 0.4);
+
+  /* ─── Radius scale ─── */
+  --radius-sm:  6px;
+  --radius-md:  10px;
+  --radius-lg:  14px;
+  --radius-full: 999px;
+
+  /* ─── Motion ─── */
+  --duration-fast:   120ms;
+  --duration-base:   180ms;
+  --duration-slow:   240ms;
+  --ease-standard:   cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ─── Legacy aliases ─── */
+  --bg-primary: var(--bg-base);
+  --bg-sidebar: var(--surface-0);
+  --bg-hover: var(--surface-2);
+  --bg-active: var(--surface-3);
+  --bg-input: var(--surface-1);
+  --bg-bubble-user: rgba(255, 255, 255, 0.94);
+  --bg-bubble-assistant: var(--surface-1);
+  --bg-card: var(--surface-1);
+
+  --border: var(--border-default);
+  --border-light: var(--border-subtle);
+
+  --text-primary: var(--text-high);
+  --text-secondary: var(--text-default);
+  --text-tertiary: var(--text-mid);
+  --text-muted: var(--text-mid);
+  /* --text-faint kept above */
+
+  --accent: var(--accent-azure);
+  --accent-hover: rgba(128, 180, 255, 0.85);
+  --accent-fg: var(--text-inverse);
+  --accent-subtle-bg: rgba(128, 180, 255, 0.12);
+  --accent-soft: rgba(128, 180, 255, 0.14);
+  --success: #4daa57;
+  --error: #e03e3e;
+  --danger: #e03e3e;
+  --success-bg: rgba(77, 170, 87, 0.12);
+  --error-bg: rgba(224, 62, 62, 0.12);
+  --danger-bg: rgba(224, 62, 62, 0.12);
+
+  /* New surface aliases used by .menu-item etc. — point at the existing
+   * translucent surface scale so they layer correctly over .atmosphere. */
+  --bg-surface:   var(--surface-0);
+  --bg-elevated:  rgba(20, 25, 40, 0.96);
+  --bg-overlay:   rgba(30, 35, 50, 0.98);
+}
+
+/* ─── LIGHT THEME (functional fallback) ─── */
+.light {
+  --bg-base: #faf8f4;
+  --bg-mid: #f5f1ea;
+  --bg-upper: #eee7db;
+  --bg-horizon: #e8e0d0;
+  --bg-ember: #f0e4d0;
+
+  --glow-azure: rgba(43, 95, 168, 0.05);
+  --glow-amber: rgba(200, 112, 58, 0.05);
+
+  --surface-0: rgba(255, 252, 247, 0.8);
+  --surface-1: rgba(0, 0, 0, 0.03);
+  --surface-2: rgba(0, 0, 0, 0.05);
+  --surface-3: rgba(0, 0, 0, 0.08);
+
+  --border-subtle:  rgba(0, 0, 0, 0.06);
+  --border-default: rgba(0, 0, 0, 0.10);
+  --border-strong:  rgba(0, 0, 0, 0.15);
+  --border-focus:   rgba(43, 95, 168, 0.4);
+
+  --text-high:    #1a1612;
+  --text-default: rgba(26, 22, 18, 0.85);
+  --text-mid:     rgba(26, 22, 18, 0.65);
+  --text-low:     rgba(26, 22, 18, 0.45);
+  --text-faint:   rgba(26, 22, 18, 0.25);
+  --text-inverse: #faf8f4;
+
+  --accent-amber: #c8703a;
+  --accent-azure: #2b5fa8;
+
+  --accent: #2563eb;
+  --accent-fg: #ffffff;
+  --accent-soft: rgba(37, 99, 235, 0.08);
+
+  --bg-bubble-user: #1a1612;
+  --bg-bubble-assistant: var(--surface-1);
+
+  --bg-elevated: rgba(255, 252, 247, 0.98);
+  --bg-overlay:  #ffffff;
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--text-high);
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv11', 'ss03';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * ATMOSPHERIC LAYER — restored. The 5-stop linear gradient with the two
+ * radial glows is the visual signature the user wanted back.
+ * ═══════════════════════════════════════════════════════════════════════ */
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 700px 500px at 30% -20%, var(--glow-azure), transparent 60%),
+    radial-gradient(ellipse 600px 400px at 80% 110%, var(--glow-amber), transparent 65%),
+    linear-gradient(180deg, var(--bg-base) 0%, var(--bg-mid) 25%, var(--bg-upper) 50%, var(--bg-horizon) 75%, var(--bg-ember) 100%);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * UTILITY CLASSES — original visual language restored
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+/* Glass material */
+.glass {
+  background: var(--surface-0);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--border-subtle);
+}
+.glass-card {
+  background: var(--surface-1);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid var(--border-default);
+}
+
+/* Serif italic gradient — used by hero headlines like
+ * "remember everything." in the chat empty state. */
+.accent-italic {
+  font-family: 'New York', 'Charter', Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: -1.2px;
+  background: linear-gradient(135deg, var(--accent-amber) 0%, var(--accent-azure) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Brand dot — gradient + soft azure glow */
+.brand-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fff, var(--accent-azure));
+  box-shadow: var(--shadow-glow-azure);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* Hero mark — glowing white/azure orb used in WikiHealthView empty state */
+.hero-mark {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95), rgba(128, 180, 255, 0.5) 60%, rgba(80, 100, 180, 0.3));
+  box-shadow: var(--shadow-glow-mark);
+  position: relative;
+  flex-shrink: 0;
+}
+.hero-mark::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 1px solid var(--border-subtle);
+}
+
+/* Success mark — large pulsing gradient orb */
+.success-mark {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-azure) 0%, var(--accent-amber) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-inverse);
+  font-size: 36px;
+  font-weight: 700;
+  box-shadow: 0 0 60px rgba(128, 180, 255, 0.5), 0 0 120px rgba(255, 150, 100, 0.3);
+  position: relative;
+  flex-shrink: 0;
+}
+.success-mark::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  border: 1px solid var(--border-subtle);
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+@keyframes pulse-ring {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.08); opacity: 0.5; }
+}
+
+/* Sidebar list active row — 2px gradient strip on the left edge */
+.list-item-active {
+  background: var(--surface-1);
+  position: relative;
+}
+.list-item-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--accent-azure), var(--accent-amber));
+  box-shadow: var(--shadow-glow-azure);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * INTERACTION-STATE UTILITIES — from commit 4. Kept.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+.focus-ring:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+.press-scale { transition: transform 80ms var(--ease-standard); }
+.press-scale:active { transform: scale(0.98); }
+
+.transition-base {
+  transition-property: background-color, color, border-color, opacity;
+  transition-duration: var(--duration-fast);
+  transition-timing-function: var(--ease-standard);
+}
+
+.menu-item {
+  background-color: transparent;
+  color: var(--text-high);
+  transition: background-color var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard);
+}
+.menu-item:hover {
+  background-color: var(--surface-2);
+}
+.menu-item:active {
+  background-color: var(--surface-3);
+}
+.menu-item:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: -2px;
+}
+
+.menu-item-muted {
+  background-color: transparent;
+  color: var(--text-mid);
+  transition: background-color var(--duration-fast) var(--ease-standard),
+              color var(--duration-fast) var(--ease-standard);
+}
+.menu-item-muted:hover {
+  background-color: var(--surface-2);
+  color: var(--text-default);
+}
+
+.icon-button {
+  color: var(--text-mid);
+  transition: color var(--duration-fast) var(--ease-standard),
+              background-color var(--duration-fast) var(--ease-standard);
+  border-radius: var(--radius-sm);
+}
+.icon-button:hover {
+  color: var(--text-high);
+  background-color: var(--surface-2);
+}
+.icon-button:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * SCROLLBAR — overlay style (kept from commit 5)
+ * ═══════════════════════════════════════════════════════════════════════ */
+* { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+*:hover { scrollbar-color: var(--border-default) transparent; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: transparent; border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+*:hover::-webkit-scrollbar-thumb { background-color: var(--border-default); background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: var(--border-strong) !important; background-clip: padding-box; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * SKELETON + PANE FADE (kept from commit 5)
+ * ═══════════════════════════════════════════════════════════════════════ */
+@keyframes skeleton-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-1) 0%,
+    var(--surface-2) 50%,
+    var(--surface-1) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes pane-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.pane-fade-in { animation: pane-fade-in var(--duration-slow) var(--ease-emphasized); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pane-fade-in,
+  .skeleton,
+  .press-scale {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * MILKDOWN / PROSEMIRROR EDITOR
+ * Inter font (UI reset font modernization preserved).
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+.ProseMirror {
+  outline: none;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--text-high);
+  min-height: 300px;
+  padding: 4px 0;
+}
+
+.ProseMirror h1 { font-size: 1.6em; font-weight: 700; margin: 0.8em 0 0.4em; color: var(--text-high); }
+.ProseMirror h2 { font-size: 1.3em; font-weight: 600; margin: 0.8em 0 0.4em; color: var(--text-high); }
+.ProseMirror h3 { font-size: 1.1em; font-weight: 600; margin: 0.6em 0 0.3em; color: var(--text-high); }
+
+.ProseMirror p { margin: 0.5em 0; }
+
+.ProseMirror strong { font-weight: 700; color: var(--text-high); }
+.ProseMirror em { font-style: italic; }
+.ProseMirror code {
+  font-family: var(--font-mono);
+  font-size: 0.87em;
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+}
+
+.ProseMirror blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 12px;
+  margin: 8px 0;
+  color: var(--text-mid);
+}
+
+.ProseMirror pre {
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+.ProseMirror ul { list-style: disc; padding-left: 1.5em; margin: 0.4em 0; }
+.ProseMirror ol { list-style: decimal; padding-left: 1.5em; margin: 0.4em 0; }
+.ProseMirror li { margin: 0.2em 0; }
+
+.ProseMirror input[type="checkbox"] { margin-right: 6px; accent-color: var(--accent-azure); }
+
+.ProseMirror table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+.ProseMirror th, .ProseMirror td { border: 1px solid var(--border); padding: 6px 10px; }
+.ProseMirror th { background: var(--surface-2); font-weight: 600; }
+
+.ProseMirror hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+.ProseMirror img { max-width: 100%; border-radius: var(--radius-sm); display: block; margin: 8px 0; }
+
+.ProseMirror-selectednode { outline: 2px solid var(--accent-azure); outline-offset: 1px; }
+
+/* ─── Wikilink chip ─── */
+a.wikilink-chip {
+  color: var(--accent-azure, #60a5fa);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  display: inline;
+  padding: 0 2px;
+  border-radius: 3px;
+  font-style: normal;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+a.wikilink-chip:hover {
+  background: rgba(96, 165, 250, 0.12);
+  text-decoration: none;
+}
+
+/* Callout blocks (Milkdown plugin) */
+.ProseMirror .callout > p { margin: 0; }
+
+@keyframes mb-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.4); }
+}
