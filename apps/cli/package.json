@@ -1,0 +1,63 @@
+{
+  "name": "mindbase-cli",
+  "version": "0.1.0",
+  "description": "Karpathy's LLM-Wiki pattern as a CLI — your local AI-maintained research wiki. Ingest sources (PDFs / URLs / text) and let an LLM build & maintain a persistent compounding wiki of interlinked markdown pages.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "mindbase": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm build"
+  },
+  "dependencies": {
+    "@mindbase/core": "workspace:*",
+    "better-sqlite3": "^11.10.0",
+    "commander": "^12.0.0",
+    "kleur": "^4.1.5",
+    "prompts": "^2.4.2"
+  },
+  "optionalDependencies": {
+    "@xenova/transformers": "^2.17.2"
+  },
+  "devDependencies": {
+    "@types/prompts": "^2.4.9",
+    "tsup": "^8.3.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "llm",
+    "wiki",
+    "knowledge-base",
+    "claude",
+    "anthropic",
+    "openai",
+    "research",
+    "pkm",
+    "markdown",
+    "obsidian",
+    "karpathy",
+    "ai"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/haobing0304/mindbase-plugin"
+  },
+  "homepage": "https://mindbase.app",
+  "bugs": "https://github.com/haobing0304/mindbase-plugin/issues",
+  "author": "Haobing Chu <haobing0304@gmail.com>"
+}
