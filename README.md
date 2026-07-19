@@ -131,18 +131,25 @@ MindBase ships as an **MCP (Model Context Protocol) server** — published on np
 
 Get the full Karpathy 8-step ingest with sub-agents, slash commands, auto-context, and per-agent tool boundaries.
 
-**Install the plugin** (this path needs a clone + pnpm for now, until the marketplace listing lands):
+**Install the plugin** — two commands inside Claude Code, no clone, no build:
+
+```
+/plugin marketplace add frankchu91/mindbase
+/plugin install mb@mindbase
+```
+
+Restart Claude Code when prompted. (The plugin launches its MCP server via `npx -y mindbase-mcp`, so npm delivers the server automatically.)
+
+<details>
+<summary>Developing the plugin from a clone?</summary>
 
 ```bash
 git clone https://github.com/frankchu91/mindbase.git
-cd mindbase
-pnpm install
-pnpm --filter @mindbase/plugin build
+cd mindbase && pnpm install
 claude --plugin-dir apps/plugin
-
-# Once published to the marketplace:
-/plugin install mindbase@mindbase-official
 ```
+
+</details>
 
 **Verify:** Open Claude Code, type `/`. You should see `/mb:contribute`, `/mb:ask`, `/mb:build`, `/mb:status`, and 8 others. Run `/mcp` — you should see `mb` connected with 49 tools.
 

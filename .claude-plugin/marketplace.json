@@ -1,0 +1,23 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "mindbase",
+  "description": "MindBase: Karpathy's LLM-Wiki pattern, no terminal required.",
+  "owner": {
+    "name": "Haobing Chu",
+    "email": "haobing0304@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "mb",
+      "description": "Build and maintain a persistent AI-tended research wiki. Includes MCP server with 49 tools, slash commands, sub-agents, and an auto-context-injection hook.",
+      "version": "0.1.1",
+      "author": {
+        "name": "Haobing Chu",
+        "email": "haobing0304@gmail.com"
+      },
+      "source": "./apps/plugin",
+      "category": "productivity",
+      "homepage": "https://github.com/frankchu91/mindbase#readme"
+    }
+  ]
+}
