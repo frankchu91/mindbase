@@ -64,13 +64,42 @@ function isLikelyBinary(name: string): boolean {
   return /\.(pdf|png|jpe?g|gif|webp|mp3|mp4|wav|zip|epub)$/i.test(name);
 }
 
+async function dirHasFiles(store: Store, dir: string): Promise<boolean> {
+  let entries;
+  try {
+    entries = await store.listDir(dir);
+  } catch {
+    return false;
+  }
+  for (const e of entries) {
+    if (e.kind === 'file') return true;
+    if (e.kind === 'directory' && (await dirHasFiles(store, `${dir}/${e.name}`))) return true;
+  }
+  return false;
+}
+
 export async function migrateLegacyData(store: Store): Promise<MigrationResult> {
   if (await store.exists('projects/default/meta.json')) {
     return { ran: false, movedFiles: 0, reason: 'already migrated' };
   }
 
-  const hasLegacyRaw = await store.exists('raw');
-  const hasLegacyWiki = await store.exists('wiki');
+  // Empty leftover raw/ or wiki/ dirs must not count as legacy data — they
+  // would re-trigger this migration (and resurrect the default project) on
+  // every single boot.
+  const hasLegacyRaw = await dirHasFiles(store, 'raw');
+  const hasLegacyWiki = await dirHasFiles(store, 'wiki');
+
+  // If any project already exists (e.g. created via mindbase_init_project),
+  // there is nothing to migrate and no default scaffold is wanted — creating
+  // one would put a broken v1 "Default project" in every user's switcher.
+  if (!hasLegacyRaw && !hasLegacyWiki) {
+    try {
+      const entries = await store.listDir('projects');
+      if (entries.some((e) => e.kind === 'directory')) {
+        return { ran: false, movedFiles: 0, reason: 'v2 projects already present' };
+      }
+    } catch { /* projects/ missing — true first boot */ }
+  }
 
   if (!hasLegacyRaw && !hasLegacyWiki) {
     // Fresh install — create the default project skeleton

@@ -77,6 +77,14 @@ export async function handle(ctx: Context, rawInput: unknown) {
   // Empty today's log.
   await writeFile(join(projectRoot, paths.logsDay(today)), `## [${today}] init | created project ${projectId}\n`, 'utf-8');
 
+  // meta.json — the server's project registry reads this; without it the
+  // project is invisible to the web UI's list/switcher.
+  await writeFile(
+    join(projectRoot, 'meta.json'),
+    JSON.stringify({ id: projectId, name, created: new Date().toISOString(), schemaVersion: 1 }, null, 2),
+    'utf-8',
+  );
+
   // Persist as current project. Merge with existing config.json if present.
   const configPath = join(ctx.dataDir, 'config.json');
   let existingConfig: Record<string, unknown> = {};
