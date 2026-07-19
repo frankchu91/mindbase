@@ -10,6 +10,7 @@ export function ProjectSwitcher() {
   const switchTo = useProjects((s) => s.switchTo);
 
   const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => { void load(); }, [load]);
@@ -28,7 +29,11 @@ export function ProjectSwitcher() {
   return (
     <div ref={ref} className="relative inline-flex">
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setMenuPos({ top: r.bottom + 4, left: r.left });
+          setOpen((v) => !v);
+        }}
         className="inline-flex items-center gap-1.5 px-2 py-1 rounded cursor-pointer text-[12px]"
         style={{ color: 'var(--text-high)', background: 'transparent' }}
         data-testid="project-switcher-button"
@@ -37,10 +42,15 @@ export function ProjectSwitcher() {
         <span style={{ fontWeight: 500 }}>{current?.name ?? currentProjectId}</span>
         <ChevronDown size={11} strokeWidth={1.8} style={{ color: 'var(--text-mid)' }} />
       </button>
-      {open && (
+      {open && menuPos && (
         <div
-          className="absolute top-full mt-1 left-0 rounded-md shadow-lg z-50 min-w-[240px]"
+          // fixed + explicit coords: the titlebar creates a stacking context
+          // below the sidebar, so an absolute z-50 menu still paints (and
+          // click-tests) underneath it. Same fix as LeftRail's PlusMenu.
+          className="fixed rounded-md shadow-lg z-50 min-w-[240px]"
           style={{
+            top: menuPos.top,
+            left: menuPos.left,
             background: 'var(--win-bg)',
             border: '0.5px solid var(--hairline)',
             boxShadow: '0 8px 24px rgba(0,0,0,0.16)',
