@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.2 (2026-07-21)
+
+### Fixed
+
+- **Zero-state first run**: on a fresh machine with no projects, every
+  project-scoped tool (contribute, status, gather_sources, and 8 more) now
+  returns an actionable instruction — create a project via
+  `mindbase_init_project`, or pick from the listed existing ones — instead of
+  `Invalid input: Required` or a dead-end pointer to `load_project`.
+- `mindbase_init_project` writes `meta.json`, so plugin-created projects
+  appear in the web UI's project list immediately.
+- Server no longer resurrects a broken v1 "Default project" on boot when
+  empty legacy dirs are present or v2 projects already exist.
+
+### Added
+
+- `mcpName` ownership field + `server.json` for publishing to the official
+  MCP Registry (registry.modelcontextprotocol.io).
+
 ## 0.1.0 (2026-07-11)
 
 First public release. MindBase is an AI research assistant that builds and

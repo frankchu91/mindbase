@@ -10,7 +10,7 @@
     {
       "name": "mb",
       "description": "Build and maintain a persistent AI-tended research wiki. Includes MCP server with 49 tools, slash commands, sub-agents, and an auto-context-injection hook.",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "author": {
         "name": "Haobing Chu",
         "email": "haobing0304@gmail.com"

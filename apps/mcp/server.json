@@ -1,0 +1,29 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.schema.json",
+  "name": "io.github.frankchu91/mindbase",
+  "description": "An LLM-maintained personal wiki: feed it sources, it cross-references pages, flags contradictions, and keeps a synthesized context.md. Local markdown, no vector DB.",
+  "repository": {
+    "url": "https://github.com/frankchu91/mindbase",
+    "source": "github"
+  },
+  "version": "0.1.2",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "mindbase-mcp",
+      "version": "0.1.2",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "MINDBASE_DATA_DIR",
+          "description": "Data directory for projects and wiki files (default: ~/mindbase-data)",
+          "isRequired": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}
