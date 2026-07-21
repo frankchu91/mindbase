@@ -116,12 +116,12 @@ setTimeout(() => {
   } else {
     const prompts = promptsRes.result.prompts ?? [];
     console.log(`\nTotal prompts: ${prompts.length}`);
-    const hasDailyDigest = prompts.some(p => p.name === 'mindbase-daily-digest');
+    const hasDailyDigest = prompts.some(p => p.name === 'daily-digest');
     if (!hasDailyDigest) {
-      console.error('FAIL: missing prompt "mindbase-daily-digest"');
+      console.error('FAIL: missing prompt "daily-digest"');
       exitCode = 1;
     } else {
-      console.log('OK: prompt "mindbase-daily-digest" present');
+      console.log('OK: prompt "daily-digest" present');
     }
   }
 
