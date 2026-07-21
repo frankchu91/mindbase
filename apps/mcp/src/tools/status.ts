@@ -4,10 +4,11 @@ import { join } from 'node:path';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import type { Context } from '../context.js';
 import { textResult, errorResult } from '../lib/error.js';
+import { resolveProjectId } from '../lib/resolve-project.js';
 import { projectPaths } from '@mindbase/core';
 
 export const inputSchema = z.object({
-  projectId: z.string().min(1),
+  projectId: z.string().optional(),
 });
 
 export const definition = {
@@ -15,9 +16,8 @@ export const definition = {
   description: 'Project dashboard: last build time, line counts, contributor stats, recent operations, file counts. Read-only.',
   inputSchema: {
     type: 'object',
-    properties: { projectId: { type: 'string' } },
-    required: ['projectId'],
-  },
+    properties: { projectId: { type: 'string', description: 'Project id; defaults to the current project (config.json)' } },
+      },
 };
 
 async function countLines(path: string): Promise<number> {
@@ -42,7 +42,9 @@ async function listFiles(dir: string): Promise<string[]> {
 export async function handle(ctx: Context, rawInput: unknown) {
   const parsed = inputSchema.safeParse(rawInput);
   if (!parsed.success) return errorResult(`Invalid input: ${parsed.error.issues[0]?.message}`);
-  const { projectId } = parsed.data;
+  const resolved = await resolveProjectId(ctx, parsed.data.projectId);
+  if (!resolved.ok) return errorResult(resolved.error);
+  const projectId = resolved.projectId;
   const root = join(ctx.dataDir, 'projects', projectId);
   const p = projectPaths();
 

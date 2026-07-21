@@ -4,10 +4,11 @@ import { join } from 'node:path';
 import { mkdir, appendFile } from 'node:fs/promises';
 import type { Context } from '../context.js';
 import { textResult, errorResult } from '../lib/error.js';
+import { resolveProjectId } from '../lib/resolve-project.js';
 import { projectPaths, isoToday } from '@mindbase/core';
 
 export const inputSchema = z.object({
-  projectId: z.string().min(1),
+  projectId: z.string().optional(),
   operation: z.string().min(1),
   topic: z.string().min(1),
   details: z.string().optional().default(''),
@@ -19,19 +20,22 @@ export const definition = {
   inputSchema: {
     type: 'object',
     properties: {
-      projectId: { type: 'string' },
+      projectId: { type: 'string', description: 'Project id; defaults to the current project (config.json)' },
       operation: { type: 'string', description: 'ingest | build | lint | research | migrate | export | ...' },
       topic: { type: 'string' },
       details: { type: 'string', description: 'Optional details (e.g., "created 4, updated 3")' },
     },
-    required: ['projectId', 'operation', 'topic'],
+    required: ['operation', 'topic'],
   },
 };
 
 export async function handle(ctx: Context, rawInput: unknown) {
   const parsed = inputSchema.safeParse(rawInput);
   if (!parsed.success) return errorResult(`Invalid input: ${parsed.error.issues[0]?.message}`);
-  const { projectId, operation, topic, details } = parsed.data;
+  const { operation, topic, details } = parsed.data;
+  const resolved = await resolveProjectId(ctx, parsed.data.projectId);
+  if (!resolved.ok) return errorResult(resolved.error);
+  const projectId = resolved.projectId;
 
   const today = isoToday();
   const hhmm = new Date().toISOString().slice(11, 16);

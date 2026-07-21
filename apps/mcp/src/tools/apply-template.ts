@@ -4,10 +4,11 @@ import { join, resolve } from 'node:path';
 import { readFile, writeFile } from 'node:fs/promises';
 import type { Context } from '../context.js';
 import { textResult, errorResult } from '../lib/error.js';
+import { resolveProjectId } from '../lib/resolve-project.js';
 import { projectPaths } from '@mindbase/core';
 
 export const inputSchema = z.object({
-  projectId: z.string().min(1),
+  projectId: z.string().optional(),
   templateId: z.enum(['empty', 'investigation', 'literature-review', 'market-research', 'reading-companion', 'topic-tracker']),
 });
 
@@ -17,10 +18,10 @@ export const definition = {
   inputSchema: {
     type: 'object',
     properties: {
-      projectId: { type: 'string' },
+      projectId: { type: 'string', description: 'Project id; defaults to the current project (config.json)' },
       templateId: { type: 'string' },
     },
-    required: ['projectId', 'templateId'],
+    required: ['templateId'],
   },
 };
 
@@ -33,7 +34,10 @@ function templatePath(): string {
 export async function handle(ctx: Context, rawInput: unknown) {
   const parsed = inputSchema.safeParse(rawInput);
   if (!parsed.success) return errorResult(`Invalid input: ${parsed.error.issues[0]?.message}`);
-  const { projectId, templateId } = parsed.data;
+  const { templateId } = parsed.data;
+  const resolved = await resolveProjectId(ctx, parsed.data.projectId);
+  if (!resolved.ok) return errorResult(resolved.error);
+  const projectId = resolved.projectId;
   if (templateId === 'empty') return textResult({ projectId, templateId, noop: true });
 
   const root = join(ctx.dataDir, 'projects', projectId);

@@ -4,9 +4,10 @@ import { join } from 'node:path';
 import { mkdir, cp } from 'node:fs/promises';
 import type { Context } from '../context.js';
 import { textResult, errorResult } from '../lib/error.js';
+import { resolveProjectId } from '../lib/resolve-project.js';
 
 export const inputSchema = z.object({
-  projectId: z.string().min(1),
+  projectId: z.string().optional(),
   target: z.enum(['markdown-bundle', 'zip-archive']).optional().default('markdown-bundle'),
 });
 
@@ -16,17 +17,19 @@ export const definition = {
   inputSchema: {
     type: 'object',
     properties: {
-      projectId: { type: 'string' },
+      projectId: { type: 'string', description: 'Project id; defaults to the current project (config.json)' },
       target: { type: 'string', description: 'markdown-bundle | zip-archive' },
     },
-    required: ['projectId'],
-  },
+      },
 };
 
 export async function handle(ctx: Context, rawInput: unknown) {
   const parsed = inputSchema.safeParse(rawInput);
   if (!parsed.success) return errorResult(`Invalid input: ${parsed.error.issues[0]?.message}`);
-  const { projectId, target } = parsed.data;
+  const { target } = parsed.data;
+  const resolved = await resolveProjectId(ctx, parsed.data.projectId);
+  if (!resolved.ok) return errorResult(resolved.error);
+  const projectId = resolved.projectId;
   const stamp = Math.floor(Date.now() / 1000);
   const src = join(ctx.dataDir, 'projects', projectId);
   const dst = join(ctx.dataDir, 'projects', projectId, 'artifacts', 'exports', `${projectId}-${stamp}`);

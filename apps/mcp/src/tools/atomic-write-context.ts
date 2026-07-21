@@ -4,10 +4,11 @@ import { join } from 'node:path';
 import { mkdir, readFile, writeFile, rename, appendFile } from 'node:fs/promises';
 import type { Context } from '../context.js';
 import { textResult, errorResult } from '../lib/error.js';
+import { resolveProjectId } from '../lib/resolve-project.js';
 import { projectPaths, isoToday } from '@mindbase/core';
 
 export const inputSchema = z.object({
-  projectId: z.string().min(1),
+  projectId: z.string().optional(),
   content: z.string().min(1),
 });
 
@@ -17,10 +18,10 @@ export const definition = {
   inputSchema: {
     type: 'object',
     properties: {
-      projectId: { type: 'string' },
+      projectId: { type: 'string', description: 'Project id; defaults to the current project (config.json)' },
       content: { type: 'string', description: 'New context.md body (full file replacement)' },
     },
-    required: ['projectId', 'content'],
+    required: ['content'],
   },
 };
 
@@ -29,7 +30,10 @@ const MAX_LINES = 400;
 export async function handle(ctx: Context, rawInput: unknown) {
   const parsed = inputSchema.safeParse(rawInput);
   if (!parsed.success) return errorResult(`Invalid input: ${parsed.error.issues[0]?.message}`);
-  const { projectId, content } = parsed.data;
+  const { content } = parsed.data;
+  const resolved = await resolveProjectId(ctx, parsed.data.projectId);
+  if (!resolved.ok) return errorResult(resolved.error);
+  const projectId = resolved.projectId;
   const today = isoToday();
   const hhmm = new Date().toISOString().slice(11, 16);
   const stamp = `${today}T${hhmm.replace(':', '')}`;

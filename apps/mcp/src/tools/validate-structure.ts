@@ -4,10 +4,11 @@ import { join } from 'node:path';
 import { stat } from 'node:fs/promises';
 import type { Context } from '../context.js';
 import { textResult, errorResult } from '../lib/error.js';
+import { resolveProjectId } from '../lib/resolve-project.js';
 import { projectPaths } from '@mindbase/core';
 
 export const inputSchema = z.object({
-  projectId: z.string().min(1),
+  projectId: z.string().optional(),
 });
 
 export const definition = {
@@ -16,16 +17,17 @@ export const definition = {
   inputSchema: {
     type: 'object',
     properties: {
-      projectId: { type: 'string', description: 'Project id' },
+      projectId: { type: 'string', description: 'Project id; defaults to the current project (config.json)' },
     },
-    required: ['projectId'],
-  },
+      },
 };
 
 export async function handle(ctx: Context, rawInput: unknown) {
   const parsed = inputSchema.safeParse(rawInput);
   if (!parsed.success) return errorResult(`Invalid input: ${parsed.error.issues[0]?.message}`);
-  const { projectId } = parsed.data;
+  const resolved = await resolveProjectId(ctx, parsed.data.projectId);
+  if (!resolved.ok) return errorResult(resolved.error);
+  const projectId = resolved.projectId;
   const root = join(ctx.dataDir, 'projects', projectId);
   const p = projectPaths();
 

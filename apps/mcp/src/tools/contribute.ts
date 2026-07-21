@@ -5,6 +5,7 @@ import { mkdir, readFile, appendFile } from 'node:fs/promises';
 import { userInfo } from 'node:os';
 import type { Context } from '../context.js';
 import { textResult, errorResult } from '../lib/error.js';
+import { resolveProjectId } from '../lib/resolve-project.js';
 import { projectPaths, isoToday } from '@mindbase/core';
 
 export const inputSchema = z.object({
@@ -29,21 +30,14 @@ export const definition = {
   },
 };
 
-async function resolveProjectId(ctx: Context, requested?: string): Promise<string | null> {
-  if (requested) return requested;
-  try {
-    const cfg = JSON.parse(await readFile(join(ctx.dataDir, 'config.json'), 'utf-8')) as { currentProjectId?: string };
-    return cfg.currentProjectId ?? null;
-  } catch { return null; }
-}
-
 export async function handle(ctx: Context, rawInput: unknown) {
   const parsed = inputSchema.safeParse(rawInput);
   if (!parsed.success) return errorResult(`Invalid input: ${parsed.error.issues[0]?.message}`);
   const { text, mode } = parsed.data;
 
-  const projectId = await resolveProjectId(ctx, parsed.data.projectId);
-  if (!projectId) return errorResult('No current project. Set one via mindbase_load_project or pass projectId.');
+  const resolved = await resolveProjectId(ctx, parsed.data.projectId);
+  if (!resolved.ok) return errorResult(resolved.error);
+  const projectId = resolved.projectId;
 
   const user = parsed.data.user ?? userInfo().username;
   const today = isoToday();

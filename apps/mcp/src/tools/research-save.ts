@@ -4,10 +4,11 @@ import { join } from 'node:path';
 import { mkdir, appendFile, readFile } from 'node:fs/promises';
 import type { Context } from '../context.js';
 import { textResult, errorResult } from '../lib/error.js';
+import { resolveProjectId } from '../lib/resolve-project.js';
 import { projectPaths, isoToday, slugify } from '@mindbase/core';
 
 export const inputSchema = z.object({
-  projectId: z.string().min(1),
+  projectId: z.string().optional(),
   topic: z.string().min(1),
   body: z.string().min(1),
   sources: z.array(z.string()).optional().default([]),
@@ -19,19 +20,22 @@ export const definition = {
   inputSchema: {
     type: 'object',
     properties: {
-      projectId: { type: 'string' },
+      projectId: { type: 'string', description: 'Project id; defaults to the current project (config.json)' },
       topic: { type: 'string', description: 'Human-readable topic name; slugified for filename' },
       body: { type: 'string', description: 'Markdown body' },
       sources: { type: 'array', items: { type: 'string' }, description: 'URLs or citations' },
     },
-    required: ['projectId', 'topic', 'body'],
+    required: ['topic', 'body'],
   },
 };
 
 export async function handle(ctx: Context, rawInput: unknown) {
   const parsed = inputSchema.safeParse(rawInput);
   if (!parsed.success) return errorResult(`Invalid input: ${parsed.error.issues[0]?.message}`);
-  const { projectId, topic, body, sources } = parsed.data;
+  const { topic, body, sources } = parsed.data;
+  const resolved = await resolveProjectId(ctx, parsed.data.projectId);
+  if (!resolved.ok) return errorResult(resolved.error);
+  const projectId = resolved.projectId;
   const slug = slugify(topic);
   const root = join(ctx.dataDir, 'projects', projectId);
   const p = projectPaths();
