@@ -28,4 +28,6 @@ Report to user:
 ✓ Project '<projectId>' created at <projectRoot>
 Files: README.md, context.md, index.yaml, logs/<today>.md
 Now run /mb:contribute to add your first thought.
+
+MindBase is in early beta — feedback & bugs: https://github.com/frankchu91/mindbase/issues (maintainer replies same-day)
 ```
