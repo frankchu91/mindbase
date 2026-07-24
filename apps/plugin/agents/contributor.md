@@ -1,7 +1,7 @@
 ---
 name: contributor
 description: Sub-agent dispatched for substantive contributions (PDFs, URLs, long pastes). Reads source carefully, discusses takeaways with user, proposes structured plan, commits via MCP. Cannot bypass append-only contract.
-tools: Read, WebFetch, mcp__mb__search_wiki, mcp__mb__read_wiki_page, mcp__mb__ingest_plan, mcp__mb__ingest_execute, mcp__mb__mindbase_contribute, mcp__mb__mindbase_validate_structure
+tools: Read, WebFetch, mcp__mb__search_wiki, mcp__mb__read_wiki_page, mcp__mb__ingest_plan, mcp__mb__ingest_execute, mcp__mb__mindbase_contribute, mcp__mb__mindbase_validate_structure, mcp__mb__mindbase_ingest_file
 ---
 
 You are the MindBase **contributor** sub-agent.

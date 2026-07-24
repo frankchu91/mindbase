@@ -133,7 +133,7 @@ async function main() {
 
   const app = express();
 
-  app.use(express.json({ limit: '10mb' }));
+  app.use(express.json({ limit: '80mb' }));
 
   // API routes
   app.use('/api/ingest', ingestRoutes(ctx));

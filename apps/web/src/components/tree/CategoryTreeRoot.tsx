@@ -7,8 +7,9 @@
 // Auto-flattens the contributors group when there is only one user (solo
 // projects — the common case). Uses local helpers only; the web bundle must
 // not value-import from @mindbase/core.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { apiGet } from '../../lib/api';
+import { showToast } from '../../store/toast';
 
 type CategoryId = 'readme' | 'context' | 'soul' | 'contributors' | 'research' | 'raw' | 'logs' | 'artifacts';
 
@@ -35,6 +36,8 @@ export function CategoryTreeRoot({ reloadKey = 0, onOpen }: Props) {
   const [summary, setSummary] = useState<TreeSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set(['contributors', 'research']));
+  // Bumped by in-tree mutations (e.g. raw upload) so counts + children refresh.
+  const [mutateKey, setMutateKey] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -46,7 +49,7 @@ export function CategoryTreeRoot({ reloadKey = 0, onOpen }: Props) {
         setError((e as Error).message);
       }
     })();
-  }, [reloadKey]);
+  }, [reloadKey, mutateKey]);
 
   if (error) return <div style={{ padding: 12, color: '#d88' }}>Tree load failed: {error}</div>;
   if (!summary) return <div style={{ padding: 12, color: 'var(--text-mid)' }}>Loading…</div>;
@@ -66,6 +69,8 @@ export function CategoryTreeRoot({ reloadKey = 0, onOpen }: Props) {
           onOpen={onOpen}
           expanded={expanded.has(cat.id)}
           toggle={() => toggle(cat.id)}
+          mutateKey={mutateKey}
+          onMutate={() => setMutateKey((k) => k + 1)}
         />
       ))}
     </div>
@@ -77,11 +82,15 @@ function CategoryNode({
   onOpen,
   expanded,
   toggle,
+  mutateKey,
+  onMutate,
 }: {
   cat: CategorySummary;
   onOpen: (c: string, p: string) => void;
   expanded: boolean;
   toggle: () => void;
+  mutateKey: number;
+  onMutate: () => void;
 }) {
   const singleFile = ['readme', 'context', 'soul'].includes(cat.id);
   if (singleFile) {
@@ -101,27 +110,100 @@ function CategoryNode({
 
   return (
     <div>
-      <div onClick={toggle} style={{ padding: '4px 8px', cursor: 'pointer', fontSize: 13, color: 'var(--text-default)' }}>
+      <div
+        onClick={toggle}
+        style={{ padding: '4px 8px', cursor: 'pointer', fontSize: 13, color: 'var(--text-default)', display: 'flex', alignItems: 'center' }}
+      >
         <span style={{ color: 'var(--text-faint)', marginRight: 4 }}>{expanded ? '▼' : '▶'}</span>
-        {labelFor(cat.id)}{' '}
+        {labelFor(cat.id)}
         <span style={{ color: 'var(--text-faint)', fontSize: 11, marginLeft: 4 }}>{cat.count ?? 0}</span>
+        {cat.id === 'raw' && <RawUploadButton onUploaded={onMutate} />}
       </div>
-      {expanded && <CategoryChildren cat={cat} onOpen={onOpen} />}
+      {expanded && <CategoryChildren cat={cat} onOpen={onOpen} reloadKey={mutateKey} />}
     </div>
+  );
+}
+
+/** Upload a .pdf/.md/.txt into sources/raw/ — the file picker on the Raw row. */
+function RawUploadButton({ onUploaded }: { onUploaded: () => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function handleFile(file: File) {
+    if (file.size > 50 * 1024 * 1024) {
+      showToast('File is over the 50MB limit.', 'error');
+      return;
+    }
+    setBusy(true);
+    try {
+      const buf = new Uint8Array(await file.arrayBuffer());
+      let bin = '';
+      const CHUNK = 0x8000;
+      for (let i = 0; i < buf.length; i += CHUNK) {
+        bin += String.fromCharCode(...buf.subarray(i, i + CHUNK));
+      }
+      const res = await fetch('/api/tree/raw/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: btoa(bin), filename: file.name }),
+      });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error ?? `HTTP ${res.status}`);
+      }
+      showToast('Uploaded. Run /mb:contribute in your editor to ingest it into the wiki.', 'info');
+      onUploaded();
+    } catch (e) {
+      showToast(`Upload failed: ${(e as Error).message}`, 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <button
+        onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}
+        disabled={busy}
+        title="Upload a PDF, .md, or .txt into sources/raw/"
+        data-testid="raw-upload-button"
+        style={{
+          marginLeft: 'auto', padding: '0 6px', fontSize: 12, cursor: 'pointer',
+          background: 'transparent', border: 'none', color: 'var(--text-faint)',
+          opacity: busy ? 0.5 : 1,
+        }}
+      >
+        {busy ? '…' : '⬆'}
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".pdf,.md,.txt"
+        style={{ display: 'none' }}
+        onClick={(e) => e.stopPropagation()}
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = '';
+          if (f) void handleFile(f);
+        }}
+      />
+    </>
   );
 }
 
 function CategoryChildren({
   cat,
   onOpen,
+  reloadKey = 0,
 }: {
   cat: CategorySummary;
   onOpen: (c: string, p: string) => void;
+  reloadKey?: number;
 }) {
   const [data, setData] = useState<unknown>(null);
   useEffect(() => {
     apiGet(`/tree/${cat.id}`).then(setData).catch(() => setData({}));
-  }, [cat.id]);
+  }, [cat.id, reloadKey]);
   if (!data) return <div style={{ paddingLeft: 24, color: 'var(--text-faint)', fontSize: 12 }}>…</div>;
 
   if (cat.id === 'contributors') {

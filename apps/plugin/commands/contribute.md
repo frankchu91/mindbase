@@ -14,7 +14,7 @@ Parse in order (flags may appear anywhere, but text is what remains):
 **Important**: `-p` / `--project` does **NOT** change the current project — it only routes THIS single contribution. Use `/mb:load <id>` to change current project persistently.
 
 **Resolve input type** (in order):
-1. File path ending in `.pdf`, `.md`, `.txt`, `.html`: use `Read` tool to load.
+1. File path ending in `.pdf`, `.md`, `.txt`: call `mindbase_ingest_file({ path, projectId? })` FIRST — it archives the original into `sources/raw/` and returns the extracted text. Then continue with the returned text (discuss takeaways → contribute). `.html` files: use `Read`.
 2. URL (`https?://...`): use `WebFetch`.
 3. Raw doc id (`raw:<id>`): use `mindbase_read_wiki_page` or similar.
 4. Pasted long text: ingest scale.

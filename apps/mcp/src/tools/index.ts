@@ -51,6 +51,7 @@ import { register as registerAtomicWriteContext } from './atomic-write-context.j
 import { register as registerRebuildIndex } from './rebuild-index.js';
 import { register as registerStatus } from './status.js';
 import { register as registerMigrate } from './migrate.js';
+import { register as registerIngestFile } from './ingest-file.js';
 import { register as registerResearchSave } from './research-save.js';
 import { register as registerExportProject } from './export-project.js';
 
@@ -107,6 +108,7 @@ export function registerTools(server: Server, ctx: Context): void {
   registerRebuildIndex(handlers as Map<string, (input: unknown) => Promise<unknown>>, definitions, ctx);
   registerStatus(handlers as Map<string, (input: unknown) => Promise<unknown>>, definitions, ctx);
   registerMigrate(handlers as Map<string, (input: unknown) => Promise<unknown>>, definitions, ctx);
+  registerIngestFile(handlers as Map<string, (input: unknown) => Promise<unknown>>, definitions, ctx);
   registerResearchSave(handlers as Map<string, (input: unknown) => Promise<unknown>>, definitions, ctx);
   registerExportProject(handlers as Map<string, (input: unknown) => Promise<unknown>>, definitions, ctx);
 
