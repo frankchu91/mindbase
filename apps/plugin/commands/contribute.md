@@ -15,7 +15,7 @@ Parse in order (flags may appear anywhere, but text is what remains):
 
 **Resolve input type** (in order):
 1. File path ending in `.pdf`, `.md`, `.txt`: call `mindbase_ingest_file({ path, projectId? })` FIRST — it archives the original into `sources/raw/` and returns the extracted text. Then continue with the returned text (discuss takeaways → contribute). `.html` files: use `Read`.
-2. URL (`https?://...`): use `WebFetch`.
+2. URL pointing directly at a file (ends in `.pdf`, or an arXiv `/pdf/` link): call `mindbase_ingest_file({ path: url })` — it downloads, archives, and extracts. Other URLs (HTML pages): use `WebFetch`.
 3. Raw doc id (`raw:<id>`): use `mindbase_read_wiki_page` or similar.
 4. Pasted long text: ingest scale.
 5. Short user thought (≤ 200 chars, time-anchored "today I…"): capture scale.

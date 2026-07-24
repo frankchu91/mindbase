@@ -1,7 +1,7 @@
 // apps/mcp/src/tools/ingest-file.ts
 import { z } from 'zod';
 import { join, extname, basename } from 'node:path';
-import { mkdir, copyFile, writeFile, appendFile, stat, readFile } from 'node:fs/promises';
+import { mkdir, writeFile, appendFile, stat, readFile } from 'node:fs/promises';
 import type { Context } from '../context.js';
 import { textResult, errorResult } from '../lib/error.js';
 import { resolveProjectId } from '../lib/resolve-project.js';
@@ -21,17 +21,54 @@ export const inputSchema = z.object({
 export const definition = {
   name: 'mindbase_ingest_file',
   description:
-    'Ingest a file (PDF, .md, or .txt) into a project: archives the original into sources/raw/<date>/, extracts text locally (pdfjs for PDFs — no API call), writes an .extracted.md sidecar for PDFs, and returns the text. After calling this, discuss the key takeaways with the user and file a summary via mindbase_contribute.',
+    'Ingest a file (PDF, .md, or .txt) into a project: archives the original into sources/raw/<date>/, extracts text locally (pdfjs for PDFs — no API call), writes an .extracted.md sidecar for PDFs, and returns the text. Accepts a local absolute path OR an http(s) URL that points directly at a file (e.g. an arXiv PDF link) — URLs are downloaded first. After calling this, discuss the key takeaways with the user and file a summary via mindbase_contribute.',
   inputSchema: {
     type: 'object',
     properties: {
-      path: { type: 'string', description: 'Absolute path to the file on disk' },
+      path: { type: 'string', description: 'Absolute path on disk, or a direct http(s) URL to a PDF/.md/.txt file' },
       projectId: { type: 'string', description: 'Project id; defaults to the current project (config.json)' },
       title: { type: 'string', description: 'Optional human title; defaults to the filename' },
     },
     required: ['path'],
   },
 };
+
+interface Fetched { buf: Buffer; filename: string; ext: string }
+
+async function fetchRemoteFile(url: string): Promise<Fetched | { error: string }> {
+  let res: Response;
+  try {
+    res = await fetch(url, { redirect: 'follow', signal: AbortSignal.timeout(60_000) });
+  } catch (e) {
+    return { error: `Download failed: ${(e as Error).message}` };
+  }
+  if (!res.ok) return { error: `Download failed: HTTP ${res.status} from ${url}` };
+
+  const ctype = (res.headers.get('content-type') ?? '').toLowerCase();
+  const urlPath = new URL(url).pathname;
+  const urlExt = extname(urlPath).toLowerCase();
+
+  let ext: string;
+  if (ctype.includes('application/pdf') || urlExt === '.pdf') ext = '.pdf';
+  else if (ctype.includes('text/markdown') || urlExt === '.md') ext = '.md';
+  else if (ctype.includes('text/plain') || urlExt === '.txt') ext = '.txt';
+  else if (ctype.includes('text/html')) {
+    return { error: 'That URL serves an HTML page, not a file. Fetch the page content yourself and use mindbase_contribute — or find the direct PDF link (on arXiv, the /pdf/ URL).' };
+  } else {
+    return { error: `Unsupported content-type '${ctype}'. Supported: PDF, markdown, plain text.` };
+  }
+
+  const buf = Buffer.from(await res.arrayBuffer());
+  if (buf.length > MAX_BYTES) {
+    return { error: `Downloaded file is ${(buf.length / 1024 / 1024).toFixed(1)}MB — the limit is 50MB.` };
+  }
+
+  // Filename: Content-Disposition beats URL basename.
+  const dispo = res.headers.get('content-disposition') ?? '';
+  const dispoMatch = /filename\*?=(?:UTF-8''|")?([^";]+)/i.exec(dispo);
+  const rawName = dispoMatch?.[1] ?? basename(urlPath) ?? 'download';
+  return { buf, filename: rawName, ext };
+}
 
 function sanitizeBase(name: string): string {
   const cleaned = name.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '');
@@ -51,20 +88,33 @@ export async function handle(ctx: Context, rawInput: unknown) {
   if (!resolved.ok) return errorResult(resolved.error);
   const projectId = resolved.projectId;
 
-  // Validate the source file.
-  let info;
-  try {
-    info = await stat(path);
-  } catch {
-    return errorResult(`File not found: ${path}. Pass an absolute path to an existing file.`);
-  }
-  if (!info.isFile()) return errorResult(`Not a file: ${path}`);
-  if (info.size > MAX_BYTES) {
-    return errorResult(`File is ${(info.size / 1024 / 1024).toFixed(1)}MB — the limit is 50MB.`);
-  }
-  const ext = extname(path).toLowerCase();
-  if (!ALLOWED_EXTS.has(ext)) {
-    return errorResult(`Unsupported extension '${ext}'. Supported: .pdf, .md, .txt. For URLs, fetch the page yourself and use mindbase_contribute.`);
+  // Obtain the file bytes — remote URL or local path.
+  let buf: Buffer;
+  let ext: string;
+  let base: string;
+  if (/^https?:\/\//i.test(path)) {
+    const fetched = await fetchRemoteFile(path);
+    if ('error' in fetched) return errorResult(fetched.error);
+    buf = fetched.buf;
+    ext = fetched.ext;
+    base = sanitizeBase(basename(fetched.filename, extname(fetched.filename)));
+  } else {
+    let info;
+    try {
+      info = await stat(path);
+    } catch {
+      return errorResult(`File not found: ${path}. Pass an absolute path to an existing file, or an http(s) URL.`);
+    }
+    if (!info.isFile()) return errorResult(`Not a file: ${path}`);
+    if (info.size > MAX_BYTES) {
+      return errorResult(`File is ${(info.size / 1024 / 1024).toFixed(1)}MB — the limit is 50MB.`);
+    }
+    ext = extname(path).toLowerCase();
+    if (!ALLOWED_EXTS.has(ext)) {
+      return errorResult(`Unsupported extension '${ext}'. Supported: .pdf, .md, .txt. For web pages, fetch the content yourself and use mindbase_contribute.`);
+    }
+    buf = await readFile(path);
+    base = sanitizeBase(basename(path, extname(path)));
   }
 
   // Archive the original into sources/raw/<today>/, avoiding name collisions.
@@ -73,24 +123,23 @@ export async function handle(ctx: Context, rawInput: unknown) {
   const rawDirAbs = join(ctx.dataDir, 'projects', projectId, p.rawDir, today);
   await mkdir(rawDirAbs, { recursive: true });
 
-  const base = sanitizeBase(basename(path, extname(path)));
   let finalBase = base;
   for (let i = 2; await fileExists(join(rawDirAbs, `${finalBase}${ext}`)); i++) {
     finalBase = `${base}-${i}`;
   }
   const archivedAbs = join(rawDirAbs, `${finalBase}${ext}`);
-  await copyFile(path, archivedAbs);
+  await writeFile(archivedAbs, buf);
 
   // Extract text.
   let text: string;
   if (ext === '.pdf') {
     try {
-      text = await extractPdfText(new Uint8Array(await readFile(path)));
+      text = await extractPdfText(new Uint8Array(buf));
     } catch (e) {
       return errorResult(`PDF extraction failed: ${(e as Error).message}. The original was archived at ${p.rawDir}/${today}/${finalBase}${ext}.`);
     }
   } else {
-    text = (await readFile(path, 'utf-8')).trim();
+    text = buf.toString('utf-8').trim();
   }
 
   // PDF sidecar so the archived copy stays readable without re-extraction.
