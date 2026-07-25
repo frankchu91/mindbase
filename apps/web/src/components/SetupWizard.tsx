@@ -45,11 +45,13 @@ const PROVIDERS: ProviderOption[] = [
 
 interface Props {
   mode: 'onboarding' | 'settings';
+  /** Onboarding only: dismiss without configuring an LLM (set up later in Settings). */
+  onSkip?: () => void;
   onBack?: () => void;       // settings mode: ← Back
   onComplete?: () => void;   // called after successful save
 }
 
-export function SetupWizard({ mode, onBack, onComplete }: Props) {
+export function SetupWizard({ mode, onBack, onComplete, onSkip }: Props) {
   const settings = useSettings();
 
   // Determine initial provider from current config
@@ -202,7 +204,7 @@ export function SetupWizard({ mode, onBack, onComplete }: Props) {
             <div className="text-[13px] leading-[1.55] mb-8" style={{ color: 'var(--text-mid)' }}>
               {mode === 'onboarding' ? <>MindBase needs an LLM to compile your knowledge.<br />Pick the one you already pay for.</> : 'You can change this any time.'}
             </div>
-            <div className="grid grid-cols-2 gap-2.5 mb-6">
+            <div className="grid grid-cols-2 gap-2.5 mb-4">
               {PROVIDERS.map((p) => {
                 const isSelected = selectedId === p.id;
                 return (
@@ -226,6 +228,16 @@ export function SetupWizard({ mode, onBack, onComplete }: Props) {
                 );
               })}
             </div>
+            {mode === 'onboarding' && onSkip && (
+              <button
+                onClick={onSkip}
+                data-testid="onboarding-skip"
+                className="text-[12px] cursor-pointer bg-transparent border-none"
+                style={{ color: 'var(--text-low)', textDecoration: 'underline', textUnderlineOffset: 3 }}
+              >
+                Skip for now — browse and capture work without an LLM; set this up later in Settings
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -79,7 +79,11 @@ export default function App() {
       settings.loadFromServer();
       return;
     }
-    if (!settings.isConfigured()) setOnboarding(true);
+    // Respect a prior "skip for now" — browsing/capture work without an LLM,
+    // and plugin-first users may never configure one here at all.
+    if (!settings.isConfigured() && localStorage.getItem('mindbase.onboardingSkipped') !== '1') {
+      setOnboarding(true);
+    }
   }, [settings.loaded]);
 
   // Auto-save current chat — preserved verbatim from old App.tsx.
@@ -294,7 +298,14 @@ export default function App() {
             className="w-full max-w-sm rounded-xl overflow-hidden"
             style={{ background: 'var(--win-bg)', border: '0.5px solid var(--hairline)', maxHeight: '85vh' }}
           >
-            <SetupWizard mode="onboarding" onComplete={() => setOnboarding(false)} />
+            <SetupWizard
+              mode="onboarding"
+              onComplete={() => setOnboarding(false)}
+              onSkip={() => {
+                localStorage.setItem('mindbase.onboardingSkipped', '1');
+                setOnboarding(false);
+              }}
+            />
           </div>
         </div>
       )}
