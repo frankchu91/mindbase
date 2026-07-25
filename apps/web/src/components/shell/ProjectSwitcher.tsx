@@ -1,5 +1,6 @@
 // apps/web/src/components/shell/ProjectSwitcher.tsx
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Plus } from 'lucide-react';
 import { useProjects } from '../../store/projects';
 
@@ -12,13 +13,17 @@ export function ProjectSwitcher() {
   const [open, setOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { void load(); }, [load]);
 
   useEffect(() => {
     if (!open) return;
     function onDoc(e: MouseEvent): void {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      // The menu lives in a body portal, so check both the trigger and the menu.
+      const t = e.target as Node;
+      if (ref.current?.contains(t) || menuRef.current?.contains(t)) return;
+      setOpen(false);
     }
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
@@ -42,16 +47,19 @@ export function ProjectSwitcher() {
         <span style={{ fontWeight: 500 }}>{current?.name ?? currentProjectId}</span>
         <ChevronDown size={11} strokeWidth={1.8} style={{ color: 'var(--text-mid)' }} />
       </button>
-      {open && menuPos && (
+      {open && menuPos && createPortal(
         <div
-          // fixed + explicit coords: the titlebar creates a stacking context
-          // below the sidebar, so an absolute z-50 menu still paints (and
-          // click-tests) underneath it. Same fix as LeftRail's PlusMenu.
+          // Body portal: the titlebar creates a stacking context that sits
+          // below the sidebar, so even position:fixed z-50 painted underneath
+          // it (menu looked "transparent"). Portaling to <body> escapes every
+          // ancestor stacking context for both painting and hit-testing.
+          ref={menuRef}
           className="fixed rounded-md shadow-lg z-50 min-w-[240px]"
           style={{
             top: menuPos.top,
             left: menuPos.left,
             background: 'var(--win-bg)',
+            backdropFilter: 'blur(12px)',
             border: '0.5px solid var(--hairline)',
             boxShadow: '0 8px 24px rgba(0,0,0,0.16)',
           }}
@@ -86,7 +94,8 @@ export function ProjectSwitcher() {
           >
             <Plus size={12} strokeWidth={1.8} /> New project…
           </button>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
