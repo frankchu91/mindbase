@@ -60,7 +60,7 @@ export async function runServer(opts: RunOptions = {}): Promise<void> {
   const ctx = await loadContext({ dataDir: opts.dataDir });
 
   const server = new Server(
-    { name: 'mindbase-mcp', version: '0.1.2' },
+    { name: 'mindbase-mcp', version: '0.1.3' },
     {
       capabilities: {
         tools: {},

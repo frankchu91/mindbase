@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.3 (2026-07-24)
+
+### Added
+
+- **`mindbase_ingest_file`** — first-class file ingestion for every MCP
+  client: takes a local path **or a direct URL** (e.g. an arXiv `/pdf/`
+  link), downloads if remote, archives the original into
+  `sources/raw/<date>/`, extracts text locally via pdfjs, writes an
+  `.extracted.md` sidecar for PDFs, and returns the text for the
+  contribute flow. 50MB cap; HTML URLs are rejected with guidance.
+- Web UI: upload button on the Raw category row + empty-state upload row;
+  `POST /api/tree/raw/upload`.
+- `mindbase_init_project` result carries a one-time feedback note.
+
+### Fixed
+
+- `GET /api/tree/raw/:date/:id` returned utf-8 garbage for PDFs — now
+  serves the extracted-text sidecar when present; raw listing hides
+  sidecars.
+- Project switcher menu painted underneath the sidebar (stacking
+  context); now portaled to <body> and fully opaque.
+
 ## 0.1.2 (2026-07-21)
 
 ### Fixed

@@ -39,7 +39,7 @@ async function main() {
   }
   if (args.showVersion) {
     // Version is hardcoded here; bumped at release time.
-    console.log('mindbase-mcp 0.1.2');
+    console.log('mindbase-mcp 0.1.3');
     return;
   }
 
