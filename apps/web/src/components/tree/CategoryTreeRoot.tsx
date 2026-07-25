@@ -119,13 +119,17 @@ function CategoryNode({
         <span style={{ color: 'var(--text-faint)', fontSize: 11, marginLeft: 4 }}>{cat.count ?? 0}</span>
         {cat.id === 'raw' && <RawUploadButton onUploaded={onMutate} />}
       </div>
-      {expanded && <CategoryChildren cat={cat} onOpen={onOpen} reloadKey={mutateKey} />}
+      {expanded && <CategoryChildren cat={cat} onOpen={onOpen} reloadKey={mutateKey} onMutate={onMutate} />}
     </div>
   );
 }
 
-/** Upload a .pdf/.md/.txt into sources/raw/ — the file picker on the Raw row. */
-function RawUploadButton({ onUploaded }: { onUploaded: () => void }) {
+/**
+ * Upload a .pdf/.md/.txt into sources/raw/. Two variants: 'icon' sits on the
+ * Raw category row; 'row' is the discoverable empty-state row shown when the
+ * category is expanded with no entries.
+ */
+function RawUploadButton({ onUploaded, variant = 'icon' }: { onUploaded: () => void; variant?: 'icon' | 'row' }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
@@ -162,19 +166,33 @@ function RawUploadButton({ onUploaded }: { onUploaded: () => void }) {
 
   return (
     <>
-      <button
-        onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}
-        disabled={busy}
-        title="Upload a PDF, .md, or .txt into sources/raw/"
-        data-testid="raw-upload-button"
-        style={{
-          marginLeft: 'auto', padding: '0 6px', fontSize: 12, cursor: 'pointer',
-          background: 'transparent', border: 'none', color: 'var(--text-faint)',
-          opacity: busy ? 0.5 : 1,
-        }}
-      >
-        {busy ? '…' : '⬆'}
-      </button>
+      {variant === 'icon' ? (
+        <button
+          onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}
+          disabled={busy}
+          title="Upload a PDF, .md, or .txt into sources/raw/"
+          data-testid="raw-upload-button"
+          style={{
+            marginLeft: 'auto', padding: '1px 7px', fontSize: 11, cursor: 'pointer',
+            background: 'transparent', border: '1px solid var(--hairline)', borderRadius: 5,
+            color: 'var(--accent)', fontWeight: 500,
+            opacity: busy ? 0.5 : 1,
+          }}
+        >
+          {busy ? '…' : '⬆ Upload'}
+        </button>
+      ) : (
+        <div
+          onClick={() => { if (!busy) inputRef.current?.click(); }}
+          data-testid="raw-upload-empty-row"
+          style={{
+            cursor: 'pointer', fontSize: 12, padding: '4px 8px 4px 24px',
+            color: 'var(--accent)', opacity: busy ? 0.5 : 1,
+          }}
+        >
+          {busy ? 'Uploading…' : '⬆ Upload a PDF, .md or .txt…'}
+        </div>
+      )}
       <input
         ref={inputRef}
         type="file"
@@ -195,10 +213,12 @@ function CategoryChildren({
   cat,
   onOpen,
   reloadKey = 0,
+  onMutate,
 }: {
   cat: CategorySummary;
   onOpen: (c: string, p: string) => void;
   reloadKey?: number;
+  onMutate?: () => void;
 }) {
   const [data, setData] = useState<unknown>(null);
   useEffect(() => {
@@ -285,6 +305,9 @@ function CategoryChildren({
 
   if (cat.id === 'raw') {
     const entries = (data as { entries: Array<{ date: string; id: string }> }).entries ?? [];
+    if (entries.length === 0 && onMutate) {
+      return <RawUploadButton variant="row" onUploaded={onMutate} />;
+    }
     return (
       <>
         {entries.map((e) => (
