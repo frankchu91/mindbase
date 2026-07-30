@@ -17,6 +17,14 @@ MindBase implements Andrej Karpathy's [LLM-Wiki pattern](https://x.com/karpathy/
   </picture>
 </p>
 
+**Your editor is the primary interface.** Throw an arXiv link at it and the ingest flow runs right where you work — the model archives the original, walks you through the takeaways, and waits for your go-ahead before touching the wiki:
+
+<p align="center">
+  <img alt="The core flow in Claude Code: /mb:contribute with an arXiv link — download, archive, discuss takeaways, approve, commit" src="docs/assets/terminal-contribute.png" width="880">
+</p>
+
+(The web UI further down is an optional companion for browsing what the LLM wrote — operations run in your editor.)
+
 **Status:** Early access. Beta for feedback (2026-Q3). Data model + core loop stable; some UI features still in v1 → v2 migration.
 
 ---
