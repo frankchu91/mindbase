@@ -25,7 +25,7 @@ MindBase implements Andrej Karpathy's [LLM-Wiki pattern](https://x.com/karpathy/
 
 (The web UI further down is an optional companion for browsing what the LLM wrote — operations run in your editor.)
 
-**Status:** Early access. Beta for feedback (2026-Q3). Data model + core loop stable; some UI features still in v1 → v2 migration.
+**Status:** Early access, actively developed. The v2 data model and the full core loop (ingest → build → ask → lint) are stable and what you install today. A few legacy corners of the optional web UI are still being polished.
 
 ---
 
