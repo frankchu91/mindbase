@@ -13,6 +13,7 @@ import { compileStreamRoutes } from './routes/compile-stream';
 import { askRoutes } from './routes/ask';
 import { fileToWikiRoutes } from './routes/file_to_wiki';
 import { configRoutes } from './routes/config';
+import { ollamaRoutes } from './routes/ollama';
 import { lintRoutes } from './routes/lint';
 import { searchRoutes } from './routes/search';
 import { chatRoutes } from './routes/chats';
@@ -143,6 +144,7 @@ async function main() {
   app.use('/api/wiki/file', fileToWikiRoutes(ctx));
   app.use('/api/wiki/insights', insightsRoutes(ctx));
   app.use('/api/config', configRoutes(ctx));
+  app.use('/api', ollamaRoutes());
   app.use('/api/lint', lintRoutes(ctx));
   app.use('/api/search', searchRoutes(ctx));
   app.use('/api/chats', chatRoutes(ctx));

@@ -114,8 +114,27 @@ export class OllamaAdapter implements LLMAdapter {
   async testConnection(): Promise<{ ok: boolean; error?: string }> {
     try {
       const r = await this.fetchImpl(`${this.baseUrl}/api/tags`, { method: 'GET' });
-      if (r.ok) return { ok: true };
-      return { ok: false, error: `HTTP ${r.status}` };
+      if (!r.ok) return { ok: false, error: `HTTP ${r.status}` };
+
+      // Connectivity alone isn't a useful verdict — verify the configured
+      // model is actually present and can produce a token. Without this,
+      // onboarding reports ok before any model has been pulled.
+      const model = this.config.model;
+      if (!model) return { ok: true };
+      const tags = (await r.json()) as { models?: Array<{ name: string }> };
+      const present = (tags.models ?? []).some(
+        (m) => m.name === model || m.name === `${model}:latest` || m.name.startsWith(`${model}:`),
+      );
+      if (!present) {
+        return { ok: false, error: `Model '${model}' is not installed in Ollama yet.` };
+      }
+      const gen = await this.fetchImpl(`${this.baseUrl}/api/generate`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ model, prompt: 'hi', stream: false, options: { num_predict: 1 } }),
+      });
+      if (!gen.ok) return { ok: false, error: `Model '${model}' failed to respond: HTTP ${gen.status}` };
+      return { ok: true };
     } catch (e) {
       return { ok: false, error: (e as Error).message };
     }

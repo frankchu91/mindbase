@@ -54,8 +54,13 @@ describe('OllamaAdapter', () => {
     );
   });
 
-  it('testConnection hits /api/tags', async () => {
-    const mockFetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ models: [] }), { status: 200 }));
+  it('testConnection verifies the configured model exists and generates', async () => {
+    const mockFetch = vi.fn().mockImplementation((url: string) => {
+      if (String(url).endsWith('/api/tags')) {
+        return Promise.resolve(new Response(JSON.stringify({ models: [{ name: 'llama3.2:latest' }] }), { status: 200 }));
+      }
+      return Promise.resolve(new Response(JSON.stringify({ response: 'hi' }), { status: 200 }));
+    });
     const adapter = new OllamaAdapter({
       apiKey: '',
       model: 'llama3.2',
@@ -67,6 +72,22 @@ describe('OllamaAdapter', () => {
       'http://localhost:11434/api/tags',
       expect.objectContaining({ method: 'GET' }),
     );
+    expect(mockFetch).toHaveBeenCalledWith(
+      'http://localhost:11434/api/generate',
+      expect.any(Object),
+    );
+  });
+
+  it('testConnection fails when the configured model is not installed', async () => {
+    const mockFetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ models: [] }), { status: 200 }));
+    const adapter = new OllamaAdapter({
+      apiKey: '',
+      model: 'llama3.2',
+      fetchImpl: mockFetch as unknown as typeof fetch,
+    });
+    const r = await adapter.testConnection();
+    expect(r.ok).toBe(false);
+    expect(r.error).toMatch(/not installed/);
   });
 
   it('emits tool_call chunks from message.tool_calls', async () => {

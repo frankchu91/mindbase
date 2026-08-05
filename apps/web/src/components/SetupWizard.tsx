@@ -1,9 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { ProviderName } from '@mindbase/core';
 import { useSettings } from '../store/settings';
-import { apiPut, apiPost } from '../lib/api';
+import { apiGet, apiPut, apiPost, apiSSE } from '../lib/api';
 
-type WizardStep = 'provider' | 'configure' | 'result';
+type WizardStep = 'provider' | 'configure' | 'local-setup' | 'result';
+
+interface OllamaStatus { state: 'running' | 'stopped' | 'not-installed'; models: string[] }
+interface ModelRec { model: string; downloadGB: number; tier: string; reason: string }
+interface SystemInfo {
+  profile: { cpuModel: string; totalMemGB: number; appleSilicon: boolean };
+  recommendations: ModelRec[];
+}
 
 interface ProviderOption {
   id: string;
@@ -32,9 +39,9 @@ const PROVIDERS: ProviderOption[] = [
     defaults: { model: 'deepseek-chat', baseUrl: '' },
   },
   {
-    id: 'ollama', label: 'Ollama', description: 'Run models locally, no API key',
+    id: 'ollama', label: 'Free — runs on your computer', description: 'No account, no API key. MindBase picks the best local model for your hardware.',
     configProvider: 'ollama', needsApiKey: false, needsBaseUrl: true,
-    defaults: { model: 'llama3', baseUrl: 'http://localhost:11434' },
+    defaults: { model: '', baseUrl: 'http://localhost:11434' },
   },
   {
     id: 'custom', label: 'Custom Endpoint', description: 'Any OpenAI-compatible API',
@@ -75,6 +82,67 @@ export function SetupWizard({ mode, onBack, onComplete, onSkip }: Props) {
   const [testResult, setTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // --- Free·Local (Ollama) guided flow ---
+  const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus | null>(null);
+  const [sysInfo, setSysInfo] = useState<SystemInfo | null>(null);
+  const [chosenModel, setChosenModel] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [pull, setPull] = useState<{ completed: number; total: number; status: string } | null>(null);
+  const [localPhase, setLocalPhase] = useState<'detect' | 'pulling' | 'verifying' | 'error'>('detect');
+  const [localError, setLocalError] = useState<string | null>(null);
+  const pullCancelRef = useRef<{ cancel: () => void } | null>(null);
+
+  useEffect(() => {
+    if (step !== 'local-setup') return;
+    let stop = false;
+    async function tick() {
+      try {
+        const s = await apiGet<OllamaStatus>('/ollama/status');
+        if (!stop) setOllamaStatus(s);
+      } catch { /* keep last known */ }
+    }
+    void tick();
+    const iv = setInterval(() => void tick(), 2000);
+    apiGet<SystemInfo>('/system')
+      .then((i) => {
+        if (stop) return;
+        setSysInfo(i);
+        setChosenModel((m) => m ?? i.recommendations[0]?.model ?? null);
+      })
+      .catch(() => {});
+    return () => { stop = true; clearInterval(iv); };
+  }, [step]);
+
+  function startPull(modelTag: string) {
+    setLocalPhase('pulling');
+    setLocalError(null);
+    setPull({ completed: 0, total: 0, status: 'starting…' });
+    pullCancelRef.current = apiSSE('/ollama/pull', { model: modelTag }, (ev) => {
+      const e = ev as unknown as { kind: string; status?: string; completed?: number; total?: number; error?: string };
+      if (e.kind === 'progress') setPull({ completed: e.completed ?? 0, total: e.total ?? 0, status: e.status ?? '' });
+      else if (e.kind === 'done') void verifyLocal(modelTag);
+      else if (e.kind === 'error') { setLocalPhase('error'); setLocalError(e.error ?? 'Download failed'); }
+    });
+  }
+
+  async function verifyLocal(modelTag: string) {
+    setLocalPhase('verifying');
+    setLocalError(null);
+    try {
+      const r = await apiPost<{ ok: boolean; error?: string }>('/config/test', {
+        provider: 'ollama', model: modelTag, apiKey: '', baseUrl: 'http://localhost:11434',
+      });
+      if (!r.ok) throw new Error(r.error ?? 'The model did not respond');
+      const config = { provider: 'ollama' as ProviderName, model: modelTag, apiKey: '', baseUrl: 'http://localhost:11434', autoSave, mergeSaves };
+      await apiPut('/config', config);
+      settings.setAll(config as unknown as Parameters<typeof settings.setAll>[0]);
+      onComplete?.();
+    } catch (e) {
+      setLocalPhase('error');
+      setLocalError((e as Error).message);
+    }
+  }
+
   useEffect(() => {
     if (!settings.loaded) settings.loadFromServer();
   }, [settings.loaded, settings.loadFromServer]);
@@ -101,7 +169,9 @@ export function SetupWizard({ mode, onBack, onComplete, onSkip }: Props) {
     setBaseUrl(provider.defaults.baseUrl || (id === 'custom' ? baseUrl : ''));
     if (!provider.needsApiKey) setApiKey('');
     setTestResult(null);
-    setStep('configure');
+    // The free-local path has its own guided flow: detect → recommend →
+    // install → verify. Everything else uses the generic key/config step.
+    setStep(id === 'ollama' ? 'local-setup' : 'configure');
   }
 
   async function testConnection() {
@@ -237,6 +307,127 @@ export function SetupWizard({ mode, onBack, onComplete, onSkip }: Props) {
               >
                 Skip for now — browse and capture work without an LLM; set this up later in Settings
               </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Free·Local guided step: detect Ollama → recommend by hardware → pull → verify.
+  if (step === 'local-setup') {
+    const st = ollamaStatus;
+    const recs = sysInfo?.recommendations ?? [];
+    const chosen = recs.find((r) => r.model === chosenModel) ?? recs[0];
+    const alreadyInstalled = !!chosen && !!st?.models.some((m) => m === chosen.model || m.startsWith(`${chosen.model}`));
+    const pct = pull && pull.total > 0 ? Math.round((pull.completed / pull.total) * 100) : null;
+    const cmdBox = (cmd: string) => (
+      <div className="flex items-center gap-2 rounded-lg px-3 py-2 mb-3"
+        style={{ background: 'var(--surface-2, rgba(0,0,0,0.25))', border: '1px solid var(--hairline)' }}>
+        <code className="flex-1 text-[12px] text-left" style={{ color: 'var(--text-high)' }}>{cmd}</code>
+        <button onClick={() => void navigator.clipboard.writeText(cmd)} className="text-[11px] cursor-pointer px-2 py-0.5 rounded"
+          style={{ color: 'var(--accent-azure)', border: '1px solid var(--hairline)' }}>Copy</button>
+      </div>
+    );
+
+    return (
+      <div className="flex flex-col h-full" style={{ background: mode === 'settings' ? 'var(--surface-0)' : 'transparent' }}>
+        {header}
+        <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col items-center justify-center">
+          <div className="w-full max-w-[460px] text-center" data-testid="local-setup-step">
+            <button onClick={() => { pullCancelRef.current?.cancel(); setLocalPhase('detect'); setStep('provider'); }}
+              className="text-[12px] cursor-pointer mb-6" style={{ color: 'var(--text-low)' }}>← Choose a different provider</button>
+            <div className="text-[28px] font-bold tracking-[-1px] mb-2" style={{ color: 'var(--text-high)' }}>
+              Free, local, <span className="accent-italic">yours.</span>
+            </div>
+
+            {!st && <div className="text-[13px]" style={{ color: 'var(--text-mid)' }}>Checking your machine…</div>}
+
+            {st?.state === 'not-installed' && (
+              <div className="text-left mt-5" data-testid="local-state-not-installed">
+                <div className="text-[13px] mb-3" style={{ color: 'var(--text-mid)' }}>
+                  MindBase runs models through <b>Ollama</b> (free, open source). Install it, and this screen will continue automatically:
+                </div>
+                {cmdBox('brew install ollama && brew services start ollama')}
+                <div className="text-[12px]" style={{ color: 'var(--text-low)' }}>
+                  Not on macOS or no Homebrew? Download from <a href="https://ollama.com/download" target="_blank" rel="noreferrer" style={{ color: 'var(--accent-azure)' }}>ollama.com/download</a> — waiting for it to start…
+                </div>
+              </div>
+            )}
+
+            {st?.state === 'stopped' && (
+              <div className="text-left mt-5" data-testid="local-state-stopped">
+                <div className="text-[13px] mb-3" style={{ color: 'var(--text-mid)' }}>
+                  Ollama is installed but not running. Start it and this screen will continue automatically:
+                </div>
+                {cmdBox('brew services start ollama')}
+                <div className="text-[12px]" style={{ color: 'var(--text-low)' }}>or run <code>ollama serve</code> in a terminal.</div>
+              </div>
+            )}
+
+            {st?.state === 'running' && localPhase === 'detect' && chosen && (
+              <div className="mt-4" data-testid="local-state-running">
+                {sysInfo && (
+                  <div className="text-[12px] mb-4" style={{ color: 'var(--text-low)' }}>
+                    Detected: {sysInfo.profile.cpuModel} · {sysInfo.profile.totalMemGB} GB RAM
+                  </div>
+                )}
+                <div className="text-left rounded-[12px] p-4 mb-3 glass-card" style={{ borderColor: 'var(--border-focus)' }}>
+                  <div className="text-[14px] font-semibold" style={{ color: 'var(--text-high)' }}>{chosen.model}</div>
+                  <div className="text-[12px] mt-1" style={{ color: 'var(--text-mid)' }}>{chosen.reason}</div>
+                </div>
+                {recs.length > 1 && (
+                  <button onClick={() => setShowAdvanced((v) => !v)} className="text-[12px] cursor-pointer mb-3" style={{ color: 'var(--text-low)' }}>
+                    {showAdvanced ? 'Hide options' : 'More options…'}
+                  </button>
+                )}
+                {showAdvanced && recs.filter((r) => r.model !== chosen.model).map((r) => (
+                  <button key={r.model} onClick={() => setChosenModel(r.model)}
+                    className="block w-full text-left rounded-[10px] p-3 mb-2 glass-card cursor-pointer">
+                    <span className="text-[13px] font-medium" style={{ color: 'var(--text-high)' }}>{r.model}</span>
+                    <span className="text-[11px] ml-2" style={{ color: 'var(--text-low)' }}>{r.downloadGB} GB · {r.reason}</span>
+                  </button>
+                ))}
+                <button
+                  onClick={() => (alreadyInstalled ? void verifyLocal(chosen.model) : startPull(chosen.model))}
+                  data-testid="local-install-button"
+                  className="w-full py-2.5 rounded-[10px] font-semibold text-[13px] cursor-pointer mt-1"
+                  style={{ background: 'var(--accent-azure)', color: 'var(--text-inverse)' }}>
+                  {alreadyInstalled ? `Use installed ${chosen.model}` : `Install ${chosen.model} · ${chosen.downloadGB} GB download`}
+                </button>
+                <div className="text-[11.5px] mt-4 leading-[1.5]" style={{ color: 'var(--text-low)' }}>
+                  Local models are great for capture, summaries and search. For deep synthesis and
+                  contradiction detection, a cloud model still does noticeably better — you can
+                  switch or mix any time in Settings.
+                </div>
+              </div>
+            )}
+
+            {localPhase === 'pulling' && (
+              <div className="mt-6" data-testid="local-state-pulling">
+                <div className="text-[13px] mb-2" style={{ color: 'var(--text-mid)' }}>
+                  Downloading {chosen?.model}… {pct !== null ? `${pct}%` : ''} <span style={{ color: 'var(--text-low)' }}>{pull?.status}</span>
+                </div>
+                <div className="w-full h-[6px] rounded-full overflow-hidden" style={{ background: 'var(--surface-2, rgba(0,0,0,0.25))' }}>
+                  <div className="h-full rounded-full transition-all" style={{ width: `${pct ?? 4}%`, background: 'var(--accent-azure)' }} />
+                </div>
+                <button onClick={() => { pullCancelRef.current?.cancel(); setLocalPhase('detect'); }}
+                  className="text-[12px] cursor-pointer mt-4" style={{ color: 'var(--text-low)' }}>Cancel</button>
+              </div>
+            )}
+
+            {localPhase === 'verifying' && (
+              <div className="mt-6 text-[13px]" style={{ color: 'var(--text-mid)' }} data-testid="local-state-verifying">
+                Testing the model with a quick hello…
+              </div>
+            )}
+
+            {localPhase === 'error' && (
+              <div className="mt-6" data-testid="local-state-error">
+                <div className="text-[13px] mb-3" style={{ color: 'var(--danger, #d66)' }}>{localError}</div>
+                <button onClick={() => setLocalPhase('detect')} className="text-[13px] cursor-pointer px-4 py-2 rounded-[10px]"
+                  style={{ border: '1px solid var(--hairline)', color: 'var(--text-high)' }}>Try again</button>
+              </div>
             )}
           </div>
         </div>
