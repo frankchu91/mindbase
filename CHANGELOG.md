@@ -24,8 +24,24 @@ free local model):
   vocabulary is schema-limited: no action can write `sources/`
   (contributors or raw), mirroring the plugin sub-agents' tool
   allowlists.
+- **`/lint` + a rebuilt Wiki Health view** — the AI reads your wiki and
+  surfaces contradictions, orphan pages, stale claims, missing pages,
+  missing links, and gaps as cards. Per-card: open the cited pages,
+  Dismiss (persists), or Follow up (files into today's contributor
+  note). Findings cached to `artifacts/lint/<date>.json`.
+- **`/research <topic>`** — synthesizes a cited research page from your
+  wiki; add a Brave Search API key (Settings → Web Search) and it pulls
+  live web results in too. No key → clearly labeled wiki-only mode.
 - Every operation appends to `logs/<date>.md` in the same format the
   plugin uses, so editor sessions and UI sessions share one history.
+
+### Fixed — ask on v2 projects
+
+- v2 projects had an **empty search index** (only v1 `wiki/` paths were
+  indexed), so chat answers cited nothing. `sources/research/` and
+  `context.md` are now indexed at boot and after every operation.
+- Ask's auto-save filed answers into the v1 `wiki/notes/` tree; on v2 it
+  now creates a proper research page and logs the query.
 
 ## 0.2.0 (2026-08-06)
 
