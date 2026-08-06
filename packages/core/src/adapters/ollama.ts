@@ -42,6 +42,11 @@ export class OllamaAdapter implements LLMAdapter {
           messages: request.messages,
           tools: toOllamaTools(request.tools),
           stream: true,
+          // Thinking-mode models (qwen3, deepseek-r1) otherwise spend minutes
+          // producing hidden `thinking` tokens while `content` stays empty —
+          // the UI looks frozen. 88s → ~1s for a greeting on qwen3:14b.
+          // No-op for models without a thinking mode.
+          think: false,
           options: { temperature: request.temperature, num_predict: request.max_tokens },
         }),
       });
@@ -131,7 +136,7 @@ export class OllamaAdapter implements LLMAdapter {
       const gen = await this.fetchImpl(`${this.baseUrl}/api/generate`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ model, prompt: 'hi', stream: false, options: { num_predict: 1 } }),
+        body: JSON.stringify({ model, prompt: 'hi', stream: false, think: false, options: { num_predict: 1 } }),
       });
       if (!gen.ok) return { ok: false, error: `Model '${model}' failed to respond: HTTP ${gen.status}` };
       return { ok: true };
