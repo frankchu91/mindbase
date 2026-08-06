@@ -10,7 +10,7 @@ export const SLASH_COMMANDS: SlashCommand[] = [
   { name: 'contribute', hint: 'process a thought/source into the wiki', op: 'contribute' },
   { name: 'build', hint: 'rebuild context.md from unbuilt sources', op: 'build' },
   { name: 'lint', hint: 'health check — contradictions, orphans, gaps', op: 'lint' },
-  { name: 'research', hint: 'research a question — coming soon', op: null },
+  { name: 'research', hint: 'synthesize a research page on a topic', op: 'research' },
 ];
 
 /** Commands matching the composer text, which must start with '/'. */

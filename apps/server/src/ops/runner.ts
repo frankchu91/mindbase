@@ -12,6 +12,8 @@ import { gatherProjectCore, gatherResearchPages, gatherUnbuiltSources } from './
 import { contributePrompt, contributePlanSchema, type RelatedPage } from './recipes/contribute';
 import { buildPrompt, buildSchema } from './recipes/build';
 import { lintPrompt, lintSchema, type Finding } from './recipes/lint';
+import { researchPrompt, researchSchema, type ResearchSource } from './recipes/research';
+import { braveSearchSources } from './web-search';
 import type { Action } from './types';
 
 export interface StoredFinding extends Finding {
@@ -22,7 +24,7 @@ export interface StoredFinding extends Finding {
 export type OpEvent =
   | { kind: 'phase'; phase: string }
   | { kind: 'plan'; planId: string; takeaways: string[]; plan: Action[] }
-  | { kind: 'applied'; applied: string[]; failed: Array<{ action: string; error: string }> }
+  | { kind: 'applied'; applied: string[]; failed: Array<{ action: string; error: string }>; note?: string }
   | { kind: 'findings'; date: string; findings: StoredFinding[] }
   | { kind: 'done' }
   | { kind: 'error'; error: string };
@@ -32,6 +34,8 @@ export interface OpsCtx extends LlmCtx {
   projectId: string;
   /** Hybrid search over the wiki; empty array on failure is acceptable. */
   findRelated?: (text: string, k: number) => Promise<RelatedPage[]>;
+  /** Optional Brave Search key — enables web mode for the research op. */
+  braveApiKey?: string;
 }
 
 // --- pending contribute plans (checkpoint state) ---
@@ -103,6 +107,53 @@ export async function applyContributePlan(planId: string, selected: number[], em
     const result = await applyActions(pending.projectRoot, actions);
     await appendOpLog(pending.projectRoot, 'contribute', `applied ${result.applied.length}, failed ${result.failed.length} (ui)`);
     emit({ kind: 'applied', applied: result.applied, failed: result.failed });
+    emit({ kind: 'done' });
+  } catch (e) {
+    emit({ kind: 'error', error: errText(e) });
+  }
+}
+
+// --- research: synthesize a new research page (wiki-only or wiki+web) ---
+
+const WIKI_SOURCE_CHAR_CAP = 4_000;
+
+export async function runResearch(ctx: OpsCtx, topic: string, emit: (e: OpEvent) => void): Promise<void> {
+  try {
+    emit({ kind: 'phase', phase: 'searching your wiki' });
+    const core = await gatherProjectCore(ctx.projectRoot);
+    const related = (await ctx.findRelated?.(topic, 6).catch(() => [])) ?? [];
+    const sources: ResearchSource[] = (
+      await Promise.all(
+        related.map(async (r) => {
+          const body = await readFile(join(ctx.projectRoot, r.path), 'utf-8').catch(() => '');
+          return body.trim() ? [{ label: r.path, body: body.slice(0, WIKI_SOURCE_CHAR_CAP) }] : [];
+        }),
+      )
+    ).flat();
+
+    let mode: 'wiki-only' | 'web' = 'wiki-only';
+    let degraded = '';
+    if (ctx.braveApiKey) {
+      emit({ kind: 'phase', phase: 'searching the web (Brave)' });
+      try {
+        sources.push(...(await braveSearchSources(ctx.braveApiKey, topic)));
+        mode = 'web';
+      } catch (e) {
+        degraded = ` Web search failed (${(e as Error).message}); answered from your wiki only.`;
+      }
+    }
+
+    emit({ kind: 'phase', phase: `synthesizing with ${ctx.config.model} (${sources.length} sources)` });
+    const { system, user } = researchPrompt({ topic, core, sources, mode });
+    const out = await completeJson(ctx, { system, user, schema: researchSchema, maxTokens: 8192 });
+
+    emit({ kind: 'phase', phase: 'writing' });
+    const result = await applyActions(ctx.projectRoot, out.actions);
+    await appendOpLog(ctx.projectRoot, 'research', `"${topic.slice(0, 60)}" mode=${mode} applied ${result.applied.length} (ui)`);
+    const note = mode === 'web'
+      ? `Synthesized from your wiki + ${sources.length} sources including web results.${degraded}`
+      : `Synthesized from your wiki only — add a Brave Search key in Settings for web research.${degraded}`;
+    emit({ kind: 'applied', applied: result.applied, failed: result.failed, note });
     emit({ kind: 'done' });
   } catch (e) {
     emit({ kind: 'error', error: errText(e) });

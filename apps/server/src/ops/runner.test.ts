@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, writeFile, readFile, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  runContributePlan, applyContributePlan, runBuild, runLint,
+  runContributePlan, applyContributePlan, runBuild, runLint, runResearch,
   latestLintArtifact, dismissLintFinding,
   type OpEvent, type OpsCtx,
 } from './runner';
@@ -121,6 +121,39 @@ describe('build', () => {
     expect(c2.events.some((e) => e.kind === 'error' && /already running/.test(e.error))).toBe(true);
     release();
     await first;
+  });
+});
+
+describe('research', () => {
+  const researchJson = JSON.stringify({
+    actions: [
+      { kind: 'create_research_page', slug: 'topic-x', markdown: '# Topic X\n\nSynthesis. (source: sources/research/base.md)' },
+    ],
+  });
+
+  it('wiki-only: reads related page bodies, writes the page, notes the mode', async () => {
+    await writeFile(join(root, 'sources', 'research', 'base.md'), '# Base\n\nfacts', 'utf-8');
+    const ctx: OpsCtx = {
+      ...scriptedCtx([researchJson]),
+      findRelated: async () => [{ path: 'sources/research/base.md', excerpt: 'Base' }],
+    };
+    const c = collect();
+    await runResearch(ctx, 'topic x', c.emit);
+    const applied = c.events.find((e) => e.kind === 'applied');
+    expect(applied && applied.kind === 'applied' && applied.applied).toEqual(['sources/research/topic-x.md']);
+    expect(applied!.kind === 'applied' && applied!.note).toMatch(/wiki only/);
+    expect(await readFile(join(root, 'sources', 'research', 'topic-x.md'), 'utf-8')).toContain('Synthesis');
+    const log = await readFile(join(root, 'logs', `${new Date().toISOString().slice(0, 10)}.md`), 'utf-8');
+    expect(log).toMatch(/research \| "topic x" mode=wiki-only/);
+  });
+
+  it('bad brave key degrades to wiki-only instead of failing', async () => {
+    const ctx: OpsCtx = { ...scriptedCtx([researchJson]), braveApiKey: 'bogus-key-for-test' };
+    const c = collect();
+    await runResearch(ctx, 'topic x', c.emit);
+    const applied = c.events.find((e) => e.kind === 'applied');
+    expect(applied && applied.kind === 'applied' && applied.applied).toEqual(['sources/research/topic-x.md']);
+    expect(applied!.kind === 'applied' && applied!.note).toMatch(/Web search failed/);
   });
 });
 

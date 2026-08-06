@@ -74,7 +74,7 @@ export function ChatPane({
     if (!text) return;
     // Slash ops run as server-side operations, not chat turns.
     const slash = text.match(/^\/(\w+)\s*([\s\S]*)$/);
-    if (slash && (slash[1] === 'contribute' || slash[1] === 'build' || slash[1] === 'lint')) {
+    if (slash && (slash[1] === 'contribute' || slash[1] === 'build' || slash[1] === 'lint' || slash[1] === 'research')) {
       setDraft('');
       runOp(slash[1] as OpName, slash[2]?.trim() ?? '');
       return;

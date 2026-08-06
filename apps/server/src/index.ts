@@ -199,6 +199,11 @@ async function main() {
   // Start embedding indexer in background (does NOT block boot).
   embeddingIndexer.start();
 
+  // Refresh the BM25 search index in the background so v2 pages
+  // (sources/research/ + context.md) are retrievable on first ask —
+  // otherwise the index only updates after the first wiki mutation.
+  void ctx.reindexWiki().catch((e) => console.warn('[boot] reindexWiki failed:', (e as Error).message));
+
   // Start synthesis worker — polls .stale set every 5s.
   synthesisWorker.start();
 

@@ -12,6 +12,7 @@ import {
   Trash2,
   HardDrive,
   User as UserIcon,
+  Search as SearchIcon,
   type LucideIcon,
 } from 'lucide-react';
 import { useCanvasRoute } from '../store/canvas-route';
@@ -34,6 +35,7 @@ const SETTINGS_RAIL_MAX = 400;
 type Section =
   | 'profile'
   | 'provider'
+  | 'web-search'
   | 'daily-brief'
   | 'rss'
   | 'srs'
@@ -54,6 +56,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { id: 'profile',      label: 'Profile',                  Icon: UserIcon },
   { id: 'provider',     label: 'Provider / LLM',          Icon: SettingsIcon },
+  { id: 'web-search',   label: 'Web Search',               Icon: SearchIcon },
   { id: 'daily-brief',  label: 'Daily Brief',              Icon: MailOpen },
   { id: 'rss',          label: 'RSS Feeds',                Icon: Rss },
   { id: 'srs',          label: 'Spaced Repetition',        Icon: Layers },
@@ -212,6 +215,20 @@ export function SettingsScreen({ onClose }: Props) {
 
         {section === 'provider' && (
           <SetupWizard mode="settings" onBack={onClose} onComplete={onClose} />
+        )}
+
+        {section === 'web-search' && (
+          <div className="px-8 py-6 max-w-2xl">
+            <h2 className="text-[16px] font-semibold mb-1" style={{ color: 'var(--text-high)' }}>
+              Web Search
+            </h2>
+            <p className="text-[12px] mb-4" style={{ color: 'var(--text-mid)' }}>
+              Optional. With a key, <code>/research</code> pulls in live web results;
+              without one it synthesizes from your wiki only. Brave Search has a free
+              tier at api-dashboard.search.brave.com.
+            </p>
+            <BraveKeyField />
+          </div>
         )}
 
         {section === 'daily-brief' && (
@@ -411,6 +428,60 @@ export function SettingsScreen({ onClose }: Props) {
             </button>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function BraveKeyField() {
+  const [value, setValue] = useState('');
+  const [savedValue, setSavedValue] = useState('');
+  const dirty = value !== savedValue;
+
+  useEffect(() => {
+    apiGet<{ braveApiKey?: string }>('/config')
+      .then((c) => {
+        setValue(c.braveApiKey ?? '');
+        setSavedValue(c.braveApiKey ?? '');
+      })
+      .catch(() => {});
+  }, []);
+
+  const save = async () => {
+    const trimmed = value.trim();
+    try {
+      const current = await apiGet<Record<string, unknown>>('/config');
+      await apiPut('/config', { ...current, braveApiKey: trimmed });
+      setSavedValue(trimmed);
+      setValue(trimmed);
+      showToast(trimmed ? 'Brave Search key saved' : 'Brave Search key removed');
+    } catch (e) {
+      showToast(`Save failed: ${(e as Error).message}`, 'error');
+    }
+  };
+
+  return (
+    <div style={{ marginBottom: 16, padding: '12px 0' }}>
+      <label style={{ display: 'block', marginBottom: 4, color: 'var(--text-mid)', fontSize: 12, fontWeight: 600 }}>
+        Brave Search API key
+      </label>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          type="password"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="BSA…"
+          data-testid="brave-key-input"
+          style={{ padding: '6px 10px', width: 300, background: 'var(--bg-input, #111)', color: 'var(--text-high)', border: '1px solid var(--border-default)', borderRadius: 4, fontSize: 12 }}
+        />
+        <button
+          onClick={() => void save()}
+          disabled={!dirty}
+          data-testid="brave-key-save"
+          style={{ padding: '6px 14px', background: dirty ? 'var(--accent, #4a4a8a)' : 'transparent', color: dirty ? '#fff' : 'var(--text-low)', border: '1px solid var(--border-default)', borderRadius: 4, cursor: dirty ? 'pointer' : 'not-allowed', fontSize: 12 }}
+        >
+          Save
+        </button>
       </div>
     </div>
   );

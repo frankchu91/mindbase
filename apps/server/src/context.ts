@@ -339,6 +339,28 @@ export async function createContext(dataDir?: string): Promise<ServerContext> {
         } catch { /* keep slug */ }
         searchIndex.add({ path: filePath, title, body: enrichedBody, type: 'concept' });
       }
+      // v2 layout: research pages + context.md live outside wiki/ and must
+      // be first-class in retrieval, or /api/ask answers with no sources.
+      const firstHeading = (body: string, fallback: string) =>
+        body.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? fallback;
+      let researchEntries: Array<{ name: string; kind: 'file' | 'directory' }> = [];
+      try {
+        researchEntries = await store.listDir('sources/research');
+      } catch { /* v1 project or no research yet */ }
+      for (const entry of researchEntries) {
+        if (entry.kind !== 'file' || !entry.name.endsWith('.md')) continue;
+        const filePath = `sources/research/${entry.name}`;
+        try {
+          const body = await store.readText(filePath);
+          searchIndex.add({ path: filePath, title: firstHeading(body, entry.name.replace(/\.md$/, '')), body, type: 'concept' });
+        } catch { /* skip unreadable */ }
+      }
+      try {
+        const contextBody = await store.readText('context.md');
+        if (contextBody.trim()) {
+          searchIndex.add({ path: 'context.md', title: firstHeading(contextBody, 'Project Context'), body: contextBody, type: 'concept' });
+        }
+      } catch { /* no context.md yet */ }
       await ctx.persistIndex();
       // Rebuild WikiIndex pages + links from disk for THIS project. Other
       // projects' pages stay in the unified graph untouched.

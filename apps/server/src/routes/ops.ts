@@ -6,17 +6,24 @@ import type { Response } from 'express';
 import type { ServerContext } from '../context';
 import { projectRoot as makeProjectRoot, detectLayoutVersion } from '../context';
 import {
-  runContributePlan, applyContributePlan, runBuild, runLint,
+  runContributePlan, applyContributePlan, runBuild, runLint, runResearch,
   latestLintArtifact, dismissLintFinding,
   type OpEvent, type OpsCtx,
 } from '../ops/runner';
 import { makeHybridSearchClosure } from '../lib/compile-deps';
 
-function sse(res: Response): (e: OpEvent) => void {
+function sse(ctx: ServerContext, res: Response): (e: OpEvent) => void {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.flushHeaders?.();
-  return (e) => res.write(`data: ${JSON.stringify(e)}\n\n`);
+  return (e) => {
+    // Ops write outside the v1 wiki/ tree, so refresh retrieval whenever
+    // files were applied — else new pages are invisible to ask/search.
+    if (e.kind === 'applied' && e.applied.length > 0) {
+      void ctx.reindexWiki().catch(() => {});
+    }
+    res.write(`data: ${JSON.stringify(e)}\n\n`);
+  };
 }
 
 function unconfigured(ctx: ServerContext): boolean {
@@ -37,6 +44,7 @@ async function opsCtx(ctx: ServerContext): Promise<OpsCtx | { error: string }> {
     projectRoot: root,
     getAdapter: ctx.getAdapter,
     config: { model: ctx.config.model },
+    braveApiKey: ctx.config.braveApiKey || undefined,
     findRelated: async (text, k) => {
       const hits = await hybrid(text.slice(0, 300), k);
       return hits.map((h) => ({ path: h.path, excerpt: `${h.title}: ${h.one_liner || ''}`.slice(0, 200) }));
@@ -51,7 +59,7 @@ export function opsRoutes(ctx: ServerContext): Router {
   //   { mode: 'plan', text }                      → phases + plan event
   //   { mode: 'apply', planId, selected: number[] } → applied + done
   router.post('/contribute', async (req, res) => {
-    const emit = sse(res);
+    const emit = sse(ctx, res);
     const mode = req.body?.mode as string | undefined;
     if (mode === 'apply') {
       const planId = req.body?.planId as string | undefined;
@@ -76,7 +84,7 @@ export function opsRoutes(ctx: ServerContext): Router {
 
   // POST /api/ops/build {}
   router.post('/build', async (_req, res) => {
-    const emit = sse(res);
+    const emit = sse(ctx, res);
     const oc = await opsCtx(ctx);
     if ('error' in oc) {
       emit({ kind: 'error', error: oc.error });
@@ -86,9 +94,26 @@ export function opsRoutes(ctx: ServerContext): Router {
     return res.end();
   });
 
+  // POST /api/ops/research { topic } — SSE; writes a research page
+  router.post('/research', async (req, res) => {
+    const emit = sse(ctx, res);
+    const topic = (req.body?.topic as string | undefined)?.trim();
+    if (!topic) {
+      emit({ kind: 'error', error: 'topic required' });
+      return res.end();
+    }
+    const oc = await opsCtx(ctx);
+    if ('error' in oc) {
+      emit({ kind: 'error', error: oc.error });
+      return res.end();
+    }
+    await runResearch(oc, topic, emit);
+    return res.end();
+  });
+
   // POST /api/ops/lint {} — SSE; emits findings + caches them
   router.post('/lint', async (_req, res) => {
-    const emit = sse(res);
+    const emit = sse(ctx, res);
     const oc = await opsCtx(ctx);
     if ('error' in oc) {
       emit({ kind: 'error', error: oc.error });

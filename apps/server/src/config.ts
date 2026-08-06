@@ -44,6 +44,8 @@ export interface AtlasConfig {
   model: string;
   apiKey: string;
   baseUrl: string;
+  /** Optional Brave Search API key — enables web results in /research. */
+  braveApiKey?: string;
   autoSave: boolean;      // LLM auto-saves insights silently
   mergeSaves: boolean;     // Merge multiple saves in same chat session into one note
   maxContextChars: number; // Max chars of source content to send to LLM (depends on model context window)

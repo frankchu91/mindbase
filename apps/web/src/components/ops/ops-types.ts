@@ -21,12 +21,12 @@ export interface Finding {
 export type OpEvent =
   | { kind: 'phase'; phase: string }
   | { kind: 'plan'; planId: string; takeaways: string[]; plan: OpAction[] }
-  | { kind: 'applied'; applied: string[]; failed: Array<{ action: string; error: string }> }
+  | { kind: 'applied'; applied: string[]; failed: Array<{ action: string; error: string }>; note?: string }
   | { kind: 'findings'; date: string; findings: Finding[] }
   | { kind: 'done' }
   | { kind: 'error'; error: string };
 
-export type OpName = 'contribute' | 'build' | 'lint';
+export type OpName = 'contribute' | 'build' | 'lint' | 'research';
 
 export const FINDING_LABEL: Record<FindingKind, string> = {
   contradiction: 'contradiction',

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Loader2, Check, X, AlertTriangle, Hammer, Sparkles, Activity } from 'lucide-react';
+import { Loader2, Check, X, AlertTriangle, Hammer, Sparkles, Activity, Search } from 'lucide-react';
 import { apiSSE } from '../../lib/api';
 import { useSettings } from '../../store/settings';
 import { FindingCard } from './FindingCard';
@@ -30,13 +30,15 @@ type Stage = 'input' | 'running' | 'awaiting-approval' | 'applying' | 'done' | '
 export function OpRun({ op, initialText = '', onOpenArticle, onClose, onDone }: OpRunProps) {
   const provider = useSettings((s) => s.provider);
   const model = useSettings((s) => s.model);
-  const [stage, setStage] = useState<Stage>(op === 'contribute' && !initialText ? 'input' : 'running');
+  const takesArg = op === 'contribute' || op === 'research';
+  const [stage, setStage] = useState<Stage>(takesArg && !initialText ? 'input' : 'running');
   const [text, setText] = useState(initialText);
   const [phase, setPhase] = useState('starting');
   const [plan, setPlan] = useState<PlanState | null>(null);
   const [applied, setApplied] = useState<string[]>([]);
   const [failed, setFailed] = useState<Array<{ action: string; error: string }>>([]);
   const [findings, setFindings] = useState<Finding[]>([]);
+  const [note, setNote] = useState('');
   const [error, setError] = useState('');
   const cancelRef = useRef<(() => void) | null>(null);
 
@@ -50,6 +52,7 @@ export function OpRun({ op, initialText = '', onOpenArticle, onClose, onDone }: 
     } else if (ev.kind === 'applied') {
       setApplied(ev.applied);
       setFailed(ev.failed);
+      if (ev.note) setNote(ev.note);
       setStage('done');
       onDone?.();
     } else if (ev.kind === 'findings') {
@@ -68,7 +71,11 @@ export function OpRun({ op, initialText = '', onOpenArticle, onClose, onDone }: 
     setStage('running');
     setPhase('starting');
     setError('');
-    const body = op === 'contribute' ? { mode: 'plan', text: argText } : {};
+    const body = op === 'contribute'
+      ? { mode: 'plan', text: argText }
+      : op === 'research'
+        ? { topic: argText }
+        : {};
     const path = `/ops/${op}`;
     cancelRef.current = apiSSE<OpEvent>(path, body, handleEvent).cancel;
   }, [op, handleEvent]);
@@ -77,11 +84,11 @@ export function OpRun({ op, initialText = '', onOpenArticle, onClose, onDone }: 
   const autoStarted = useRef(false);
   useEffect(() => {
     if (autoStarted.current) return;
-    if (op !== 'contribute' || initialText) {
+    if (!takesArg || initialText) {
       autoStarted.current = true;
       start(initialText);
     }
-  }, [op, initialText, start]);
+  }, [takesArg, initialText, start]);
 
   function apply() {
     if (!plan) return;
@@ -106,8 +113,10 @@ export function OpRun({ op, initialText = '', onOpenArticle, onClose, onDone }: 
   }
 
   const selectedCount = plan?.checked.filter(Boolean).length ?? 0;
-  const Icon = op === 'build' ? Hammer : op === 'lint' ? Activity : Sparkles;
-  const title = op === 'build' ? 'Rebuild context' : op === 'lint' ? 'Wiki health check' : 'Contribute to wiki';
+  const Icon = op === 'build' ? Hammer : op === 'lint' ? Activity : op === 'research' ? Search : Sparkles;
+  const title = op === 'build' ? 'Rebuild context'
+    : op === 'lint' ? 'Wiki health check'
+    : op === 'research' ? 'Research' : 'Contribute to wiki';
 
   return (
     <div
@@ -138,7 +147,9 @@ export function OpRun({ op, initialText = '', onOpenArticle, onClose, onDone }: 
               autoFocus
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="What should I process? Paste a thought, decision, or source…"
+              placeholder={op === 'research'
+                ? 'What should I research?'
+                : 'What should I process? Paste a thought, decision, or source…'}
               rows={3}
               className="resize-none outline-none w-full px-2.5 py-2"
               style={{
@@ -152,7 +163,7 @@ export function OpRun({ op, initialText = '', onOpenArticle, onClose, onDone }: 
             />
             <div className="flex justify-end">
               <PrimaryBtn disabled={!text.trim()} onClick={() => start(text.trim())} testId="op-contribute-start">
-                Process
+                {op === 'research' ? 'Research' : 'Process'}
               </PrimaryBtn>
             </div>
           </div>
@@ -254,6 +265,11 @@ export function OpRun({ op, initialText = '', onOpenArticle, onClose, onDone }: 
                 <span>{f.action}: {f.error}</span>
               </div>
             ))}
+            {note && (
+              <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }} data-testid="op-note">
+                {note}
+              </div>
+            )}
             {provider === 'ollama' && (
               <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>
                 Ran on {model} locally — deeper synthesis available with a cloud model (Settings).
@@ -269,7 +285,7 @@ export function OpRun({ op, initialText = '', onOpenArticle, onClose, onDone }: 
               <span className="whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>{error}</span>
             </div>
             <div className="flex justify-end">
-              <PrimaryBtn onClick={() => (op === 'contribute' && !text ? setStage('input') : start(text.trim()))} testId="op-retry">
+              <PrimaryBtn onClick={() => (takesArg && !text ? setStage('input') : start(text.trim()))} testId="op-retry">
                 Retry
               </PrimaryBtn>
             </div>

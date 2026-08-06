@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import { askQuestion, slugify, AUTO_SAVE_REGEX } from '@mindbase/core';
 import type { MetaJson } from '@mindbase/core';
+import { appendFile, mkdir } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
 import type { ServerContext } from '../context';
+import { projectRoot as makeProjectRoot, detectLayoutVersion } from '../context';
+import { applyActions } from '../ops/executors';
 
 export function askRoutes(ctx: ServerContext): Router {
   const router = Router();
@@ -48,6 +52,28 @@ export function askRoutes(ctx: ServerContext): Router {
           const title = match[1].trim();
           const content = fullText.replace(AUTO_SAVE_REGEX, '').trimEnd();
           const slug = slugify(title);
+
+          // v2 layout: file the answer back as a research page (Karpathy's
+          // file-answer-back), not into the v1 wiki/notes tree.
+          const root = makeProjectRoot(ctx.dataDir, ctx.currentProjectId);
+          if ((await detectLayoutVersion(root)) === 'v2') {
+            const result = await applyActions(root, [
+              { kind: 'create_research_page', slug, markdown: `# ${title}\n\n${content}\n` },
+            ]);
+            const savedPath = result.applied[0];
+            if (savedPath) {
+              const now = new Date();
+              const date = now.toISOString().slice(0, 10);
+              const logFile = join(root, 'logs', `${date}.md`);
+              await mkdir(dirname(logFile), { recursive: true });
+              await appendFile(logFile, `## [${date} ${now.toISOString().slice(11, 16)}] query | filed "${title}" -> ${savedPath}\n`, 'utf-8');
+              await ctx.reindexWiki();
+              res.write(`data: ${JSON.stringify({ kind: 'auto_saved', title, path: savedPath })}\n\n`);
+            }
+            res.end();
+            return;
+          }
+
           const mdPath = `wiki/notes/${slug}.md`;
           const metaPath = `wiki/notes/${slug}.meta.json`;
 
