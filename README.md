@@ -550,11 +550,29 @@ You'll see:
 - **Search (`Cmd+K`):** keyword search across your wiki
 - **Project switcher:** dropdown at the top
 
-What the Web UI **can't** do (yet):
-- Run `/mb:ask`, `/mb:build`, `/mb:lint`, `/mb:research` — these need an LLM in the loop, which lives in your AI editor
-- The Rebuild button in the Web UI just tells you to run `/mb:build` in Claude Code
+Since 0.3.0 the Web UI also runs the core operations itself, with whatever
+LLM you configure in Settings (a cloud key **or the free local model** —
+see below):
+- **`/contribute`** in the chat composer — the AI reads your thought,
+  shows takeaways + a checkbox plan of wiki updates, and only writes what
+  you approve
+- **`/build`** (or the **Rebuild** button on the wiki home) — regenerates
+  `context.md` from unbuilt sources, with an automatic snapshot first
+- **✨ Process** on any note — sends that note through the same
+  contribute approval flow
 
-Think of the Web UI as **a Finder for your wiki**, and your AI editor as **where you talk to it**.
+`/mb:lint` and `/mb:research` still live in your AI editor (UI versions
+are on the roadmap).
+
+### No API key? Use the free local model
+
+The setup wizard can run MindBase entirely on a **free local model** via
+[Ollama](https://ollama.com) — no subscription, no API key, no data
+leaving your machine. It detects your hardware (RAM/CPU), recommends the
+best model that fits (e.g. `llama3.2:3b` on 8GB, `qwen3:14b` on 32GB+),
+installs Ollama if needed, pulls the model with a progress bar, and
+verifies it with a real generation before finishing. Cloud models still
+give deeper synthesis; the local path is a real, working default.
 
 ---
 

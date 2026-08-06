@@ -1,7 +1,7 @@
 {
   "name": "mb",
   "description": "Karpathy's LLM-Wiki pattern as a Claude Code plugin. Build and maintain a persistent, AI-tended research wiki from sources, capture daily thoughts, query what you know, lint for orphans and contradictions. Operations: /mb:init, /mb:contribute, /mb:build, /mb:ask, /mb:lint, /mb:status, /mb:research, /mb:daily-brief, /mb:migrate.",
-  "version": "0.1.3",
+  "version": "0.3.0",
   "author": {
     "name": "Haobing Chu",
     "email": "haobing0304@gmail.com"

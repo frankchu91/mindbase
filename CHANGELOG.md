@@ -1,5 +1,57 @@
 # Changelog
 
+## 0.3.0 (2026-08-06)
+
+### Added — Web UI runs the core operations
+
+The Web UI now has the same core functionality as the MCP/plugin path,
+orchestrated server-side with whatever LLM you configure (cloud or the
+free local model):
+
+- **`/contribute` in the chat composer** — type `/` for a command menu.
+  The AI reads your thought, streams takeaways plus a plan of wiki
+  updates; each update is a checkbox row and only approved actions are
+  written. Plans are held for 10 minutes.
+- **`/build` + a real Rebuild button** — regenerates `context.md` from
+  unbuilt sources. Snapshots the old context first
+  (`state/builder/snapshots/`), enforces a per-project lock, refreshes
+  the page when done.
+- **✨ Process on any note** — sends the note body through the same
+  contribute approval flow.
+- **`/api/ops/{contribute,build}`** — SSE endpoints backing all of the
+  above. One constrained JSON completion per operation (no multi-step
+  tool loops — far more reliable on small local models). The action
+  vocabulary is schema-limited: no action can write `sources/`
+  (contributors or raw), mirroring the plugin sub-agents' tool
+  allowlists.
+- Every operation appends to `logs/<date>.md` in the same format the
+  plugin uses, so editor sessions and UI sessions share one history.
+
+## 0.2.0 (2026-08-06)
+
+### Added — free local model onboarding
+
+- Setup wizard can configure MindBase with **no subscription and no API
+  key**: detects your hardware (RAM/CPU/platform), recommends the best
+  Ollama model that fits (`llama3.2:3b` < 12GB → `qwen3:8b` < 24GB →
+  `qwen3:14b` ≥ 24GB, `qwen3:30b-a3b` advanced), guides the Ollama
+  install, pulls the model with live progress (`/api/ollama/pull` SSE
+  proxy), and verifies with a real 1-token generation.
+- `GET /api/system` (hardware report) and `GET /api/ollama/status`
+  (3-state: not-installed / not-running / ready).
+
+### Fixed
+
+- Ollama: thinking-mode models (qwen3, deepseek-r1) returned 88s of
+  blank output — thinking is now disabled for chat and verification
+  (88.7s → 1.1s measured).
+- Ollama verify no longer false-positives when the service runs but the
+  model isn't pulled.
+- Chat composer's first message was silently unsendable on empty
+  conversations.
+- Removed v1 classify/breadcrumb chrome from v2 note pages
+  ("Reclassify failed: note not found").
+
 ## 0.1.3 (2026-07-24)
 
 ### Added
