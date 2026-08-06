@@ -7,6 +7,8 @@ import { ChatView } from '../ChatView';
 import { ChatInputShell } from './ChatInputShell';
 import { ChatEmptyState } from './ChatEmptyState';
 import { LiveEditIndicator } from './LiveEditIndicator';
+import { OpRun } from '../ops/OpRun';
+import type { OpName } from '../ops/ops-types';
 
 interface ChatPaneProps {
   chatTitle: string;
@@ -29,6 +31,7 @@ export function ChatPane({
   const { messages } = useChat();
   const model = useSettings((s) => s.model);
   const [draft, setDraft] = useState('');
+  const [activeOp, setActiveOp] = useState<{ op: OpName; text: string; runId: number } | null>(null);
   const sendFnRef = useRef<((text: string) => Promise<void>) | null>(null);
 
   const registerSend = useCallback((fn: (text: string) => Promise<void>) => {
@@ -61,9 +64,22 @@ export function ChatPane({
 
   if (focusMode) return null;
 
+  function runOp(op: OpName, arg: string) {
+    // runId forces a fresh OpRun mount even when the same op runs twice.
+    setActiveOp({ op, text: arg, runId: Date.now() });
+  }
+
   function handleSend() {
     const text = draft.trim();
-    if (!text || !sendFnRef.current) return;
+    if (!text) return;
+    // Slash ops run as server-side operations, not chat turns.
+    const slash = text.match(/^\/(\w+)\s*([\s\S]*)$/);
+    if (slash && (slash[1] === 'contribute' || slash[1] === 'build')) {
+      setDraft('');
+      runOp(slash[1] as OpName, slash[2]?.trim() ?? '');
+      return;
+    }
+    if (!sendFnRef.current) return;
     setDraft('');
     void sendFnRef.current(text);
   }
@@ -107,7 +123,16 @@ export function ChatPane({
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <LiveEditIndicator />
-        {messages.length === 0 && <ChatEmptyState onPick={(prefill) => setDraft(prefill)} />}
+        {activeOp && (
+          <OpRun
+            key={activeOp.runId}
+            op={activeOp.op}
+            initialText={activeOp.text}
+            onOpenArticle={onOpenArticle}
+            onClose={() => setActiveOp(null)}
+          />
+        )}
+        {messages.length === 0 && !activeOp && <ChatEmptyState onPick={(prefill) => setDraft(prefill)} />}
         {/* ChatView must stay MOUNTED even when empty: it registers the send
             function on mount, and the composer's first send needs it. The
             conditional render here used to unmount it on empty conversations,
@@ -130,6 +155,8 @@ export function ChatPane({
         onChange={setDraft}
         onSend={handleSend}
         modelName={model}
+        onRunOp={runOp}
+        onSlashCommand={() => setDraft('/')}
       />
 
       {/* Drag-resize handle — on chat's LEFT edge (between Canvas/RightRail and Chat),

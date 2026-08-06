@@ -1,5 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { Paperclip, AtSign, Slash, Send } from 'lucide-react';
+import { SlashMenu, matchSlashCommands, type SlashCommand } from '../ops/SlashMenu';
+import type { OpName } from '../ops/ops-types';
 
 interface ChatInputShellProps {
   value: string;
@@ -10,6 +12,8 @@ interface ChatInputShellProps {
   onAttach?: () => void;
   onMention?: () => void;
   onSlashCommand?: () => void;
+  /** When set, the composer offers slash ops (/contribute, /build). */
+  onRunOp?: (op: OpName, arg: string) => void;
   disabled?: boolean;
   placeholder?: string;
 }
@@ -23,11 +27,30 @@ export function ChatInputShell({
   onAttach,
   onMention,
   onSlashCommand,
+  onRunOp,
   disabled,
   placeholder = 'Ask anything, drop a link, /command…',
 }: ChatInputShellProps) {
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   const [rows, setRows] = useState(1);
+  const [slashIndex, setSlashIndex] = useState(0);
+
+  const slashCommands = onRunOp ? matchSlashCommands(value) : [];
+  const slashOpen = slashCommands.length > 0;
+
+  useEffect(() => setSlashIndex(0), [value]);
+
+  function selectSlash(cmd: SlashCommand) {
+    if (!cmd.op) return;
+    if (cmd.op === 'build') {
+      onChange('');
+      onRunOp?.('build', '');
+    } else {
+      // Complete the command; the argument (or the op card's input) comes next.
+      onChange(`/${cmd.name} `);
+      taRef.current?.focus();
+    }
+  }
 
   useEffect(() => {
     const el = taRef.current;
@@ -39,6 +62,29 @@ export function ChatInputShell({
   }, [value]);
 
   function handleKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (slashOpen) {
+      const selectable = slashCommands.map((c, i) => ({ c, i })).filter(({ c }) => c.op);
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (selectable.length === 0) return;
+        const dir = e.key === 'ArrowDown' ? 1 : -1;
+        const pos = selectable.findIndex(({ i }) => i === slashIndex);
+        const next = selectable[(pos + dir + selectable.length) % selectable.length]!;
+        setSlashIndex(next.i);
+        return;
+      }
+      if ((e.key === 'Enter' && !e.metaKey && !e.ctrlKey) || e.key === 'Tab') {
+        e.preventDefault();
+        const active = slashCommands[slashIndex];
+        if (active?.op) selectSlash(active);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onChange('');
+        return;
+      }
+    }
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
       if (!disabled && value.trim()) onSend();
@@ -47,7 +93,15 @@ export function ChatInputShell({
   }
 
   return (
-    <div className="pt-3 pb-3.5 px-4 flex-shrink-0" style={{ borderTop: '0.5px solid var(--hairline)' }}>
+    <div className="pt-3 pb-3.5 px-4 flex-shrink-0 relative" style={{ borderTop: '0.5px solid var(--hairline)' }}>
+      {slashOpen && (
+        <SlashMenu
+          commands={slashCommands}
+          activeIndex={slashIndex}
+          onSelect={selectSlash}
+          onHover={setSlashIndex}
+        />
+      )}
       <div
         className="flex flex-col gap-2 px-3 pt-2.5 pb-2"
         style={{

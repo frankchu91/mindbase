@@ -51,10 +51,10 @@ export async function apiPostFile<T>(path: string, file: File): Promise<T> {
   return r.json();
 }
 
-export function apiSSE(
+export function apiSSE<E extends { kind: string } = QAEvent>(
   path: string,
   body: unknown,
-  onEvent: (event: QAEvent) => void,
+  onEvent: (event: E | { kind: 'error'; error: string }) => void,
 ): { cancel: () => void } {
   const controller = new AbortController();
 
@@ -83,7 +83,7 @@ export function apiSSE(
         if (!trimmed.startsWith('data:')) continue;
         const payload = trimmed.slice(5).trim();
         try {
-          const event = JSON.parse(payload) as QAEvent;
+          const event = JSON.parse(payload) as E;
           onEvent(event);
         } catch { /* skip malformed */ }
       }
