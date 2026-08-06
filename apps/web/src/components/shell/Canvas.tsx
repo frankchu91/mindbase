@@ -139,7 +139,7 @@ function renderSurface(route: CanvasRoute, cb: CanvasCallbacks): React.ReactNode
     case 'review': return <ReviewView onBack={() => useCanvasRoute.getState().back()} onOpenArticle={cb.onOpenArticle} />;
     case 'settings': return <SettingsScreen onClose={() => useCanvasRoute.getState().back()} />;
     case 'inbox': return <InboxPage onBack={() => useCanvasRoute.getState().back()} onOpenArticle={cb.onOpenArticle} />;
-    case 'health': return <WikiHealthView onBack={() => useCanvasRoute.getState().back()} onWikiChanged={cb.onWikiChanged} />;
+    case 'health': return <WikiHealthView onBack={() => useCanvasRoute.getState().back()} onWikiChanged={cb.onWikiChanged} onOpenArticle={cb.onOpenArticle} />;
     case 'devices': return <DevicesPage onBack={() => useCanvasRoute.getState().back()} />;
     case 'ingest': return <IngestForm onBack={() => useCanvasRoute.getState().back()} onIngested={() => { useCanvasRoute.getState().back(); cb.onWikiChanged(); }} />;
     case 'stream': return <StreamView />;

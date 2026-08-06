@@ -42,9 +42,10 @@ export function ChatInputShell({
 
   function selectSlash(cmd: SlashCommand) {
     if (!cmd.op) return;
-    if (cmd.op === 'build') {
+    if (cmd.op === 'build' || cmd.op === 'lint') {
+      // Argument-less ops dispatch immediately on selection.
       onChange('');
-      onRunOp?.('build', '');
+      onRunOp?.(cmd.op, '');
     } else {
       // Complete the command; the argument (or the op card's input) comes next.
       onChange(`/${cmd.name} `);

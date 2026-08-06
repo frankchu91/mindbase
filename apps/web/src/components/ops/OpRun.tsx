@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Loader2, Check, X, AlertTriangle, Hammer, Sparkles } from 'lucide-react';
+import { Loader2, Check, X, AlertTriangle, Hammer, Sparkles, Activity } from 'lucide-react';
 import { apiSSE } from '../../lib/api';
 import { useSettings } from '../../store/settings';
+import { FindingCard } from './FindingCard';
 import {
-  type OpAction, type OpEvent, type OpName,
+  type Finding, type OpAction, type OpEvent, type OpName,
   actionTarget, actionPreview, ACTION_BADGE,
 } from './ops-types';
 
@@ -35,6 +36,7 @@ export function OpRun({ op, initialText = '', onOpenArticle, onClose, onDone }: 
   const [plan, setPlan] = useState<PlanState | null>(null);
   const [applied, setApplied] = useState<string[]>([]);
   const [failed, setFailed] = useState<Array<{ action: string; error: string }>>([]);
+  const [findings, setFindings] = useState<Finding[]>([]);
   const [error, setError] = useState('');
   const cancelRef = useRef<(() => void) | null>(null);
 
@@ -50,6 +52,10 @@ export function OpRun({ op, initialText = '', onOpenArticle, onClose, onDone }: 
       setFailed(ev.failed);
       setStage('done');
       onDone?.();
+    } else if (ev.kind === 'findings') {
+      setFindings(ev.findings);
+      setStage('done');
+      onDone?.();
     } else if (ev.kind === 'error') {
       setError(ev.error);
       setStage('error');
@@ -62,16 +68,16 @@ export function OpRun({ op, initialText = '', onOpenArticle, onClose, onDone }: 
     setStage('running');
     setPhase('starting');
     setError('');
-    const body = op === 'build' ? {} : { mode: 'plan', text: argText };
-    const path = op === 'build' ? '/ops/build' : '/ops/contribute';
+    const body = op === 'contribute' ? { mode: 'plan', text: argText } : {};
+    const path = `/ops/${op}`;
     cancelRef.current = apiSSE<OpEvent>(path, body, handleEvent).cancel;
   }, [op, handleEvent]);
 
-  // Auto-start when we arrived with an argument (or it's a build).
+  // Auto-start when we arrived with an argument (or the op takes none).
   const autoStarted = useRef(false);
   useEffect(() => {
     if (autoStarted.current) return;
-    if (op === 'build' || initialText) {
+    if (op !== 'contribute' || initialText) {
       autoStarted.current = true;
       start(initialText);
     }
@@ -100,7 +106,8 @@ export function OpRun({ op, initialText = '', onOpenArticle, onClose, onDone }: 
   }
 
   const selectedCount = plan?.checked.filter(Boolean).length ?? 0;
-  const Icon = op === 'build' ? Hammer : Sparkles;
+  const Icon = op === 'build' ? Hammer : op === 'lint' ? Activity : Sparkles;
+  const title = op === 'build' ? 'Rebuild context' : op === 'lint' ? 'Wiki health check' : 'Contribute to wiki';
 
   return (
     <div
@@ -111,7 +118,7 @@ export function OpRun({ op, initialText = '', onOpenArticle, onClose, onDone }: 
       <div className="flex items-center gap-2 px-3 py-2" style={{ borderBottom: '0.5px solid var(--hairline-soft)' }}>
         <Icon size={13} strokeWidth={1.8} style={{ color: 'var(--accent)' }} />
         <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-default)' }}>
-          {op === 'build' ? 'Rebuild context' : 'Contribute to wiki'}
+          {title}
         </span>
         <button
           onClick={onClose}
@@ -215,8 +222,21 @@ export function OpRun({ op, initialText = '', onOpenArticle, onClose, onDone }: 
           <div className="flex flex-col gap-1.5" data-testid="op-done">
             <div className="flex items-center gap-1.5" style={{ fontSize: 12.5, color: 'var(--text-default)', fontWeight: 600 }}>
               <Check size={13} strokeWidth={2.2} style={{ color: 'var(--success, #34a853)' }} />
-              {applied.length > 0 ? `Updated ${applied.length} file${applied.length === 1 ? '' : 's'}` : 'Done'}
+              {op === 'lint'
+                ? findings.length > 0
+                  ? `${findings.length} finding${findings.length === 1 ? '' : 's'} — full cards in the Health view`
+                  : 'Healthy — no findings'
+                : applied.length > 0
+                  ? `Updated ${applied.length} file${applied.length === 1 ? '' : 's'}`
+                  : 'Done'}
             </div>
+            {op === 'lint' && findings.length > 0 && (
+              <div className="flex flex-col gap-1.5 mt-0.5" data-testid="op-findings">
+                {findings.map((f) => (
+                  <FindingCard key={f.id} finding={f} onOpenPage={openPath} />
+                ))}
+              </div>
+            )}
             {applied.map((p) => (
               <button
                 key={p}

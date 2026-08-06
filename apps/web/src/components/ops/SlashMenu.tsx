@@ -9,7 +9,7 @@ export interface SlashCommand {
 export const SLASH_COMMANDS: SlashCommand[] = [
   { name: 'contribute', hint: 'process a thought/source into the wiki', op: 'contribute' },
   { name: 'build', hint: 'rebuild context.md from unbuilt sources', op: 'build' },
-  { name: 'lint', hint: 'wiki health check — coming soon', op: null },
+  { name: 'lint', hint: 'health check — contradictions, orphans, gaps', op: 'lint' },
   { name: 'research', hint: 'research a question — coming soon', op: null },
 ];
 

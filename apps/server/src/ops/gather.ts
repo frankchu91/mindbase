@@ -37,6 +37,41 @@ async function listFilesRec(dir: string, rel: string): Promise<string[]> {
  * context.md. When context.md is missing, everything counts. Newest first,
  * capped for prompt budget.
  */
+export interface ResearchPage {
+  path: string;
+  slug: string;
+  excerpt: string;
+  outbound: string[];
+  inboundCount: number;
+}
+
+const MAX_LINT_PAGES = 40;
+const MAX_EXCERPT_CHARS = 1_200;
+
+/**
+ * All research pages with excerpts + the wikilink graph between them
+ * (outbound [[slugs]] and inbound counts) — the deterministic evidence
+ * the lint recipe hands the LLM so orphan/contradiction hunting isn't
+ * left to model recall alone.
+ */
+export async function gatherResearchPages(root: string): Promise<ResearchPage[]> {
+  const rels = (await listFilesRec(join(root, 'sources', 'research'), 'sources/research')).slice(0, MAX_LINT_PAGES);
+  const pages = await Promise.all(
+    rels.map(async (rel) => {
+      const body = await readFile(join(root, rel), 'utf-8').catch(() => '');
+      const outbound = [...new Set([...body.matchAll(/\[\[([^\]|#]+)/g)].map((m) => m[1]!.trim()))];
+      const slug = (rel.split('/').pop() ?? rel).replace(/\.md$/, '');
+      return { path: rel, slug, excerpt: body.slice(0, MAX_EXCERPT_CHARS), outbound, inboundCount: 0 };
+    }),
+  );
+  const bySlug = new Map(pages.map((p) => [p.slug, p]));
+  for (const p of pages) for (const target of p.outbound) {
+    const hit = bySlug.get(target);
+    if (hit && hit !== p) hit.inboundCount += 1;
+  }
+  return pages;
+}
+
 export async function gatherUnbuiltSources(root: string): Promise<SourceFile[]> {
   const contextMtime = await stat(join(root, 'context.md')).then((s) => s.mtimeMs).catch(() => 0);
   const rels = [

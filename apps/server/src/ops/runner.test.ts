@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { mkdtemp, mkdir, writeFile, readFile, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { runContributePlan, applyContributePlan, runBuild, type OpEvent, type OpsCtx } from './runner';
+import {
+  runContributePlan, applyContributePlan, runBuild, runLint,
+  latestLintArtifact, dismissLintFinding,
+  type OpEvent, type OpsCtx,
+} from './runner';
 import type { ChatChunk, ChatMessage } from '@mindbase/core';
 
 let root: string;
@@ -117,5 +121,49 @@ describe('build', () => {
     expect(c2.events.some((e) => e.kind === 'error' && /already running/.test(e.error))).toBe(true);
     release();
     await first;
+  });
+});
+
+describe('lint', () => {
+  const lintJson = JSON.stringify({
+    findings: [
+      { kind: 'orphan', pages: ['sources/research/lonely.md'], detail: 'No inbound links.' },
+      { kind: 'question', pages: ['context.md'], detail: 'What is the deployment target?' },
+    ],
+  });
+
+  it('emits findings, caches artifact, logs — and never writes wiki files', async () => {
+    await writeFile(join(root, 'sources', 'research', 'lonely.md'), '# Lonely\n\nno links here', 'utf-8');
+    const contextBefore = await readFile(join(root, 'context.md'), 'utf-8');
+    const c = collect();
+    await runLint(scriptedCtx([lintJson]), c.emit);
+    const ev = c.events.find((e) => e.kind === 'findings');
+    expect(ev && ev.kind === 'findings' && ev.findings).toHaveLength(2);
+    expect(ev!.kind === 'findings' && ev!.findings[0]!.id).toBeTruthy();
+    expect(await readFile(join(root, 'context.md'), 'utf-8')).toBe(contextBefore);
+    const artifact = await latestLintArtifact(root);
+    expect(artifact?.findings).toHaveLength(2);
+    const log = await readFile(join(root, 'logs', `${new Date().toISOString().slice(0, 10)}.md`), 'utf-8');
+    expect(log).toMatch(/lint \| 2 findings/);
+  });
+
+  it('dismiss marks a finding in the cached artifact', async () => {
+    await writeFile(join(root, 'sources', 'research', 'lonely.md'), '# Lonely', 'utf-8');
+    const c = collect();
+    await runLint(scriptedCtx([lintJson]), c.emit);
+    const ev = c.events.find((e) => e.kind === 'findings')!;
+    const id = ev.kind === 'findings' ? ev.findings[0]!.id : '';
+    expect(await dismissLintFinding(root, id)).toBe(true);
+    const artifact = await latestLintArtifact(root);
+    expect(artifact?.findings[0]?.dismissed).toBe(true);
+    expect(artifact?.findings[1]?.dismissed).toBe(false);
+    expect(await dismissLintFinding(root, 'no-such-id')).toBe(false);
+  });
+
+  it('errors helpfully on an empty project', async () => {
+    await writeFile(join(root, 'context.md'), '', 'utf-8');
+    const c = collect();
+    await runLint(scriptedCtx([lintJson]), c.emit);
+    expect(c.events.some((e) => e.kind === 'error' && /Nothing to lint/.test(e.error))).toBe(true);
   });
 });

@@ -3,20 +3,27 @@
 // The single orchestration engine for server-side operations:
 // gather → one constrained LLM completion → (checkpoint) → validate →
 // apply via executors → append to logs/<date>.md → emit SSE events.
-import { appendFile, mkdir } from 'node:fs/promises';
+import { appendFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { applyActions } from './executors';
 import { completeJson, OpLlmError, type LlmCtx } from './llm';
-import { gatherProjectCore, gatherUnbuiltSources } from './gather';
+import { gatherProjectCore, gatherResearchPages, gatherUnbuiltSources } from './gather';
 import { contributePrompt, contributePlanSchema, type RelatedPage } from './recipes/contribute';
 import { buildPrompt, buildSchema } from './recipes/build';
+import { lintPrompt, lintSchema, type Finding } from './recipes/lint';
 import type { Action } from './types';
+
+export interface StoredFinding extends Finding {
+  id: string;
+  dismissed: boolean;
+}
 
 export type OpEvent =
   | { kind: 'phase'; phase: string }
   | { kind: 'plan'; planId: string; takeaways: string[]; plan: Action[] }
   | { kind: 'applied'; applied: string[]; failed: Array<{ action: string; error: string }> }
+  | { kind: 'findings'; date: string; findings: StoredFinding[] }
   | { kind: 'done' }
   | { kind: 'error'; error: string };
 
@@ -96,6 +103,70 @@ export async function applyContributePlan(planId: string, selected: number[], em
     const result = await applyActions(pending.projectRoot, actions);
     await appendOpLog(pending.projectRoot, 'contribute', `applied ${result.applied.length}, failed ${result.failed.length} (ui)`);
     emit({ kind: 'applied', applied: result.applied, failed: result.failed });
+    emit({ kind: 'done' });
+  } catch (e) {
+    emit({ kind: 'error', error: errText(e) });
+  }
+}
+
+// --- lint: emits findings, never writes to the wiki ---
+
+interface LintArtifact { date: string; findings: StoredFinding[] }
+
+const lintDir = (root: string) => join(root, 'artifacts', 'lint');
+
+/** Most recent artifacts/lint/<date>.json, or null when none exist. */
+export async function latestLintArtifact(root: string): Promise<LintArtifact | null> {
+  const files = (await readdir(lintDir(root)).catch(() => [] as string[]))
+    .filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
+    .sort();
+  const last = files[files.length - 1];
+  if (!last) return null;
+  try {
+    return JSON.parse(await readFile(join(lintDir(root), last), 'utf-8')) as LintArtifact;
+  } catch {
+    return null;
+  }
+}
+
+export async function dismissLintFinding(root: string, id: string): Promise<boolean> {
+  const artifact = await latestLintArtifact(root);
+  if (!artifact) return false;
+  const hit = artifact.findings.find((f) => f.id === id);
+  if (!hit) return false;
+  hit.dismissed = true;
+  await writeFile(join(lintDir(root), `${artifact.date}.json`), JSON.stringify(artifact, null, 2), 'utf-8');
+  return true;
+}
+
+export async function runLint(ctx: OpsCtx, emit: (e: OpEvent) => void): Promise<void> {
+  try {
+    emit({ kind: 'phase', phase: 'reading project' });
+    const [core, pages] = await Promise.all([
+      gatherProjectCore(ctx.projectRoot),
+      gatherResearchPages(ctx.projectRoot),
+    ]);
+    if (!core.context.trim() && pages.length === 0) {
+      emit({ kind: 'error', error: 'Nothing to lint yet — contribute a thought or two first.' });
+      return;
+    }
+    emit({ kind: 'phase', phase: `checking ${pages.length} pages with ${ctx.config.model}` });
+    const { system, user } = lintPrompt({ core, pages });
+    const out = await completeJson(ctx, { system, user, schema: lintSchema, maxTokens: 4096 });
+
+    const date = new Date().toISOString().slice(0, 10);
+    const findings: StoredFinding[] = out.findings.map((f) => ({
+      ...f,
+      // Models sometimes echo path labels with different casing/prefixes;
+      // normalize so the UI's page links resolve.
+      pages: f.pages.map((p) => (/^\.?\/?context\.md$/i.test(p.trim()) ? 'context.md' : p.trim())),
+      id: randomUUID(),
+      dismissed: false,
+    }));
+    await mkdir(lintDir(ctx.projectRoot), { recursive: true });
+    await writeFile(join(lintDir(ctx.projectRoot), `${date}.json`), JSON.stringify({ date, findings }, null, 2), 'utf-8');
+    await appendOpLog(ctx.projectRoot, 'lint', `${findings.length} findings, pages=${pages.length} (ui)`);
+    emit({ kind: 'findings', date, findings });
     emit({ kind: 'done' });
   } catch (e) {
     emit({ kind: 'error', error: errText(e) });
