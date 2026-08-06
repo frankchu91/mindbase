@@ -16,9 +16,8 @@
  */
 
 import { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react';
-import { ArrowLeft, Sparkles, Eye, Code2 } from 'lucide-react';
+import { ArrowLeft, Eye, Code2 } from 'lucide-react';
 import type { MetaJson } from '@mindbase/core';
-import { FolderBreadcrumb } from './FolderBreadcrumb';
 import { showToast } from '../store/toast';
 import { useCanvasRoute } from '../store/canvas-route';
 import { useRecentNotes } from '../store/recent-notes';
@@ -89,8 +88,8 @@ function saveViewMode(slug: string, mode: ViewMode) {
 
 export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle, autofocus }: Props) {
   // Slug is derived from path for backward compat with inner subcomponents
-  // (BacklinksPanel, OutlinePanel, LivePreviewEditor, DailyNoteHeader,
-  // FolderBreadcrumb, useRecentNotes, useNoteTitleCache, useBacklinksCache)
+  // (BacklinksPanel, OutlinePanel, LivePreviewEditor,
+  // useRecentNotes, useNoteTitleCache, useBacklinksCache)
   // which key off graph slugs.
   const slug = slugFromPath(path);
   const [title, setTitle] = useState('');
@@ -99,7 +98,6 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
-  const [compiling, setCompiling] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(() => loadViewMode(slug));
   // Local mirror of the markdown body for source mode. Kept in sync with the
   // saved body on disk + with edits made in either mode.
@@ -317,16 +315,6 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
     saveViewMode(slug, next);
   }
 
-  async function compileToWiki() {
-    if (compiling) return;
-    if (titleDirtyRef.current || saving) await doSave();
-    useCanvasRoute.getState().navigate({
-      kind: 'compile-progress',
-      sourceSlug: slug,
-      sourcePath: path,
-    });
-  }
-
   function onTitleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter' || (e.key === 'ArrowDown' && titleRef.current?.selectionStart === title.length)) {
       // Move focus into the editor body
@@ -418,24 +406,9 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
             <Code2 size={11} strokeWidth={1.8} /> Source
           </button>
         </div>
-        <button
-          onClick={() => void compileToWiki()}
-          disabled={compiling}
-          className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded cursor-pointer"
-          style={{
-            background: compiling ? 'transparent' : 'var(--accent-soft, transparent)',
-            color: 'var(--accent)',
-            border: '0.5px solid var(--hairline)',
-            opacity: compiling ? 0.6 : 1,
-          }}
-          onMouseEnter={(e) => { if (!compiling) e.currentTarget.style.background = 'var(--row-hover)'; }}
-          onMouseLeave={(e) => { if (!compiling) e.currentTarget.style.background = 'var(--accent-soft, transparent)'; }}
-          title="Compile this note → wiki (LLM decides what to create/update)"
-          data-testid="compile-to-wiki-button"
-        >
-          <Sparkles size={13} strokeWidth={1.8} />
-          {compiling ? 'Compiling…' : 'Compile to Wiki'}
-        </button>
+        {/* v1-only: Compile-to-Wiki drives the legacy compile pipeline, which
+            targets the v1 layout and errors on v2 category pages. Hidden until
+            the pipeline is ported. */}
       </div>
 
       {/* Document area + RightRail row */}
@@ -443,8 +416,9 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
         {/* Editor column */}
         <div className="flex-1 min-w-0 overflow-y-auto">
           <div className="max-w-[760px] mx-auto px-10 py-10">
-            {/* Breadcrumb */}
-            <FolderBreadcrumb slug={slug} />
+            {/* v1-only: FolderBreadcrumb (Inbox folder + Classify-with-AI) uses
+                the legacy folder taxonomy; v2 files are organized by category
+                and date, so classify always fails with "note not found". */}
 
             {/* Title */}
             <input

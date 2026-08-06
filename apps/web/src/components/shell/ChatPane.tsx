@@ -107,9 +107,12 @@ export function ChatPane({
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <LiveEditIndicator />
-        {messages.length === 0 ? (
-          <ChatEmptyState onPick={(prefill) => setDraft(prefill)} />
-        ) : (
+        {messages.length === 0 && <ChatEmptyState onPick={(prefill) => setDraft(prefill)} />}
+        {/* ChatView must stay MOUNTED even when empty: it registers the send
+            function on mount, and the composer's first send needs it. The
+            conditional render here used to unmount it on empty conversations,
+            which made the very first message silently unsendable. */}
+        <div style={{ display: messages.length === 0 ? 'none' : 'block' }}>
           <ChatView
             chrome="off"
             chatTitle={chatTitle}
@@ -119,7 +122,7 @@ export function ChatPane({
             onOpenReview={onOpenReview}
             registerSend={registerSend}
           />
-        )}
+        </div>
       </div>
 
       <ChatInputShell
