@@ -16,7 +16,8 @@
  */
 
 import { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react';
-import { ArrowLeft, Eye, Code2 } from 'lucide-react';
+import { ArrowLeft, Eye, Code2, Sparkles } from 'lucide-react';
+import { OpRun } from './ops/OpRun';
 import type { MetaJson } from '@mindbase/core';
 import { showToast } from '../store/toast';
 import { useCanvasRoute } from '../store/canvas-route';
@@ -103,6 +104,9 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
   // saved body on disk + with edits made in either mode.
   const [sourceBody, setSourceBody] = useState('');
   const sourceSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Contribute-op card state: the note body snapshot taken when ✨ Process
+  // was clicked (null = card closed).
+  const [processText, setProcessText] = useState<string | null>(null);
 
   // Reactive subscription so the RightRail tab can show "Backlinks · N" as soon
   // as the panel's fetch lands.
@@ -406,9 +410,23 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
             <Code2 size={11} strokeWidth={1.8} /> Source
           </button>
         </div>
-        {/* v1-only: Compile-to-Wiki drives the legacy compile pipeline, which
-            targets the v1 layout and errors on v2 category pages. Hidden until
-            the pipeline is ported. */}
+        <button
+          onClick={() => {
+            const body = getBodyRef.current?.() ?? sourceBody;
+            const text = [titleStateRef.current, body].filter(Boolean).join('\n\n').trim();
+            setProcessText(text || ' ');
+          }}
+          className="flex items-center gap-1 text-[11px] px-2 py-1 rounded cursor-pointer"
+          style={{
+            border: '0.5px solid var(--hairline)',
+            color: 'var(--text-mid)',
+            background: processText !== null ? 'var(--bg-2)' : 'transparent',
+          }}
+          title="Process this note into the wiki with AI"
+          data-testid="note-process"
+        >
+          <Sparkles size={11} strokeWidth={1.8} /> Process
+        </button>
       </div>
 
       {/* Document area + RightRail row */}
@@ -416,6 +434,16 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
         {/* Editor column */}
         <div className="flex-1 min-w-0 overflow-y-auto">
           <div className="max-w-[760px] mx-auto px-10 py-10">
+            {processText !== null && (
+              <OpRun
+                key={processText}
+                op="contribute"
+                initialText={processText.trim()}
+                onOpenArticle={(s, p) => onOpenArticle?.(s, p)}
+                onClose={() => setProcessText(null)}
+                onDone={onWikiChanged}
+              />
+            )}
             {/* v1-only: FolderBreadcrumb (Inbox folder + Classify-with-AI) uses
                 the legacy folder taxonomy; v2 files are organized by category
                 and date, so classify always fails with "note not found". */}

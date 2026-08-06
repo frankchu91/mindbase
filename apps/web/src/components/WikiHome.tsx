@@ -1,15 +1,13 @@
 // apps/web/src/components/WikiHome.tsx
 //
 // Wiki v2 home — renders context.md (the LLM-compiled project overview) as the
-// main canvas, with a Rebuild button to signal /mb:build should re-run.
+// main canvas. Rebuild runs the server-side build op (/api/ops/build) with the
+// configured LLM and refreshes the document when it finishes.
 // context.md is the v2 replacement for INDEX.md — see docs/pivot-plan-*.md.
-//
-// If context.md is missing (fresh project), we show an empty-state pointing
-// at /mb:build in Claude Code.
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { apiGet, apiPost } from '../lib/api';
-import { showToast } from '../store/toast';
+import { apiGet } from '../lib/api';
+import { OpRun } from './ops/OpRun';
 
 interface ContextResponse {
   category: string;
@@ -19,7 +17,7 @@ interface ContextResponse {
 export function WikiHome() {
   const [contextBody, setContextBody] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [rebuilding, setRebuilding] = useState(false);
+  const [buildRun, setBuildRun] = useState<number | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<number>(0);
 
   useEffect(() => {
@@ -33,19 +31,6 @@ export function WikiHome() {
       }
     })();
   }, [lastRefreshed]);
-
-  const rebuild = async () => {
-    setRebuilding(true);
-    try {
-      await apiPost('/compile/build', {});
-      showToast('Rebuild triggered — run /mb:build in Claude Code to complete');
-      setTimeout(() => setLastRefreshed(Date.now()), 500);
-    } catch (e) {
-      showToast(`Rebuild failed: ${(e as Error).message}`, 'error');
-    } finally {
-      setRebuilding(false);
-    }
-  };
 
   if (error) {
     return (
@@ -73,8 +58,8 @@ export function WikiHome() {
       >
         <h1 style={{ margin: 0, fontSize: 18, color: 'var(--text-high)' }}>Project Context</h1>
         <button
-          onClick={rebuild}
-          disabled={rebuilding}
+          onClick={() => setBuildRun(Date.now())}
+          disabled={buildRun !== null}
           data-testid="wiki-home-rebuild"
           style={{
             padding: '6px 14px',
@@ -82,19 +67,29 @@ export function WikiHome() {
             color: '#fff',
             border: 'none',
             borderRadius: 6,
-            cursor: rebuilding ? 'wait' : 'pointer',
+            cursor: buildRun !== null ? 'wait' : 'pointer',
             fontSize: 12,
             fontWeight: 500,
+            opacity: buildRun !== null ? 0.6 : 1,
           }}
         >
-          {rebuilding ? 'Triggering…' : '↻ Rebuild'}
+          ↻ Rebuild
         </button>
       </div>
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-[760px] mx-auto px-6 py-8">
+          {buildRun !== null && (
+            <OpRun
+              key={buildRun}
+              op="build"
+              onOpenArticle={() => setLastRefreshed(Date.now())}
+              onClose={() => setBuildRun(null)}
+              onDone={() => setLastRefreshed(Date.now())}
+            />
+          )}
           {contextBody === null ? (
             <div style={{ color: 'var(--text-mid)', fontStyle: 'italic', fontSize: 13 }}>
-              No context.md yet. Run /mb:build in Claude Code after your first contribution.
+              No context.md yet. Add a thought with /contribute in the chat, then hit Rebuild.
             </div>
           ) : (
             <div

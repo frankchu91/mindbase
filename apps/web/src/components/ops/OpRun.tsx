@@ -13,6 +13,8 @@ interface OpRunProps {
   initialText?: string;
   onOpenArticle: (slug: string, path: string) => void;
   onClose: () => void;
+  /** Fires once when the op finishes applying (files were written). */
+  onDone?: () => void;
 }
 
 interface PlanState {
@@ -24,7 +26,7 @@ interface PlanState {
 
 type Stage = 'input' | 'running' | 'awaiting-approval' | 'applying' | 'done' | 'error';
 
-export function OpRun({ op, initialText = '', onOpenArticle, onClose }: OpRunProps) {
+export function OpRun({ op, initialText = '', onOpenArticle, onClose, onDone }: OpRunProps) {
   const provider = useSettings((s) => s.provider);
   const model = useSettings((s) => s.model);
   const [stage, setStage] = useState<Stage>(op === 'contribute' && !initialText ? 'input' : 'running');
@@ -47,13 +49,14 @@ export function OpRun({ op, initialText = '', onOpenArticle, onClose }: OpRunPro
       setApplied(ev.applied);
       setFailed(ev.failed);
       setStage('done');
+      onDone?.();
     } else if (ev.kind === 'error') {
       setError(ev.error);
       setStage('error');
     } else if (ev.kind === 'done' && op === 'build') {
       setStage('done');
     }
-  }, [op]);
+  }, [op, onDone]);
 
   const start = useCallback((argText: string) => {
     setStage('running');
@@ -87,6 +90,11 @@ export function OpRun({ op, initialText = '', onOpenArticle, onClose }: OpRunPro
   }
 
   function openPath(path: string) {
+    // Applied paths are project-root-relative; map them to the tree API's
+    // (category, path-within-category) shape that onOpenArticle expects.
+    if (path === 'context.md') return onOpenArticle('context', 'context.md');
+    const m = path.match(/^(?:sources\/)?(research|contributors|raw|logs|artifacts)\/(.+)$/);
+    if (m) return onOpenArticle(m[1]!, m[2]!);
     const slug = (path.split('/').pop() ?? path).replace(/\.md$/, '');
     onOpenArticle(slug, path);
   }
