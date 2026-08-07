@@ -772,7 +772,7 @@ function PlusMenu({
         >
           {showNewDraft && (
             <PlusMenuItem
-              label="New draft"
+              label="New note (⌘N)"
               onClick={() => { setOpen(false); onNewNote('note'); }}
             />
           )}
