@@ -16,7 +16,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react';
-import { ArrowLeft, Eye, Code2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Eye, Code2, Sparkles, Loader2, Check } from 'lucide-react';
 import { OpRun } from './ops/OpRun';
 import type { MetaJson } from '@mindbase/core';
 import { showToast } from '../store/toast';
@@ -110,9 +110,13 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
   // User-authored full note (sources/contributors/<user>/notes/*)?
   const isUserNote = category === 'contributors' && /^[^/]+\/notes\//.test(path);
   const isUntitledFile = isUserNote && /\/untitled-[^/]+\.md$/.test(path);
-  const [processHintDismissed, setProcessHintDismissed] = useState(
-    () => localStorage.getItem(`mindbase.processHint.${slugFromPath(path)}`) === '1',
-  );
+  // Wiki-status chip: a contributor-layer file is "unbuilt" when it's newer
+  // than context.md — the SAME rule gatherUnbuiltSources uses for Rebuild,
+  // so the chip and the build pipeline can never disagree.
+  const isSourceFile = category === 'contributors';
+  const [unbuilt, setUnbuilt] = useState<boolean | null>(null);
+  const [donePages, setDonePages] = useState<number | null>(null);
+  const loadedBodyRef = useRef('');
 
   // Reactive subscription so the RightRail tab can show "Backlinks · N" as soon
   // as the panel's fetch lands.
@@ -130,15 +134,28 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
   const reloadFromDisk = useCallback(async () => {
     try {
       const r = await fetch(`/api/tree/${category}/${path}`);
-      const data = (await r.json()) as { body?: string; content?: string; meta?: MetaJson | null };
+      const data = (await r.json()) as { body?: string; content?: string; mtime?: string; meta?: MetaJson | null };
       const content = data.body ?? data.content ?? '';
       const split = splitTitleAndBody(content);
       setTitle(split.title || data.meta?.title || '');
       setBodyInitial(split.body);
       setSourceBody(split.body);
+      loadedBodyRef.current = split.body;
       setMeta(data.meta ?? null);
       setSavedAt(null);
       titleDirtyRef.current = false;
+      // Wiki-status: compare this file's mtime against context.md's build time.
+      if (category === 'contributors' && data.mtime) {
+        try {
+          const summary = await fetch('/api/tree').then((res) => res.json()) as {
+            categories?: Array<{ id: string; lastBuilt?: string | null }>;
+          };
+          const lastBuilt = summary.categories?.find((c) => c.id === 'context')?.lastBuilt ?? null;
+          setUnbuilt(!lastBuilt || data.mtime > lastBuilt);
+        } catch {
+          setUnbuilt(null);
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -288,9 +305,17 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
     return () => window.removeEventListener('paste', onPaste);
   }, [doSave]);
 
+  // Any content change makes the file newer than the last build → unbuilt.
+  const markEdited = useCallback(() => {
+    if (!isSourceFile) return;
+    setUnbuilt(true);
+    setDonePages(null);
+  }, [isSourceFile]);
+
   function onTitleChange(value: string) {
     titleDirtyRef.current = true;
     setTitle(value);
+    markEdited();
   }
 
   // Source-mode autosave: when the user edits the raw markdown textarea,
@@ -298,6 +323,7 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
   // so switching back to rendered mode picks up the latest source edits.
   function onSourceBodyChange(value: string) {
     setSourceBody(value);
+    if (value !== loadedBodyRef.current) markEdited();
     if (sourceSaveTimer.current) clearTimeout(sourceSaveTimer.current);
     sourceSaveTimer.current = setTimeout(() => {
       void (async () => {
@@ -445,36 +471,18 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
             <Code2 size={11} strokeWidth={1.8} /> Source
           </button>
         </div>
-        {isUserNote && !processHintDismissed && sourceBody.length >= 200 && (
-          <span
-            className="text-[11px] px-2 py-0.5 rounded-full"
-            style={{ background: 'var(--bg-2)', color: 'var(--text-mid)', border: '0.5px solid var(--hairline)' }}
-            data-testid="process-hint"
-          >
-            Ready? ✨ Process files this into the wiki →
-          </span>
+        {isSourceFile && (
+          <WikiStatusChip
+            unbuilt={unbuilt}
+            busy={processText !== null && donePages === null}
+            donePages={donePages}
+            onAdd={() => {
+              const body = getBodyRef.current?.() ?? sourceBody;
+              const text = [titleStateRef.current, body].filter(Boolean).join('\n\n').trim();
+              setProcessText(text || ' ');
+            }}
+          />
         )}
-        <button
-          onClick={() => {
-            if (isUserNote && !processHintDismissed) {
-              localStorage.setItem(`mindbase.processHint.${slug}`, '1');
-              setProcessHintDismissed(true);
-            }
-            const body = getBodyRef.current?.() ?? sourceBody;
-            const text = [titleStateRef.current, body].filter(Boolean).join('\n\n').trim();
-            setProcessText(text || ' ');
-          }}
-          className="flex items-center gap-1 text-[11px] px-2 py-1 rounded cursor-pointer"
-          style={{
-            border: '0.5px solid var(--hairline)',
-            color: 'var(--text-mid)',
-            background: processText !== null ? 'var(--bg-2)' : 'transparent',
-          }}
-          title="Process this note into the wiki with AI"
-          data-testid="note-process"
-        >
-          <Sparkles size={11} strokeWidth={1.8} /> Process
-        </button>
       </div>
 
       {/* Document area + RightRail row */}
@@ -489,7 +497,11 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
                 initialText={processText.trim()}
                 onOpenArticle={(s, p) => onOpenArticle?.(s, p)}
                 onClose={() => setProcessText(null)}
-                onDone={onWikiChanged}
+                onDone={(applied) => {
+                  setDonePages(applied?.length ?? 0);
+                  setUnbuilt(false);
+                  onWikiChanged();
+                }}
               />
             )}
             {/* v1-only: FolderBreadcrumb (Inbox folder + Classify-with-AI) uses
@@ -530,7 +542,10 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
                   getContentRef={getBodyRef as React.MutableRefObject<(() => string) | null>}
                   setContentRef={setBodyRef}
                   transformBeforeSave={transformBeforeSave}
-                  onMarkdownChange={(md) => setSourceBody(md)}
+                  onMarkdownChange={(md) => {
+                    setSourceBody(md);
+                    if (md !== loadedBodyRef.current) markEdited();
+                  }}
                   hideToolbar
                 />
               </Suspense>
@@ -574,5 +589,59 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
         />
       </div>
     </div>
+  );
+}
+
+// ─── Wiki-status chip ────────────────────────────────────────────────────────
+// Encodes the note ↔ wiki relationship: newer than the last build → a call
+// to action; digested → a quiet checkmark. `unbuilt === null` (couldn't
+// determine) falls back to the actionable state so the feature never
+// disappears.
+
+function WikiStatusChip({ unbuilt, busy, donePages, onAdd }: {
+  unbuilt: boolean | null;
+  busy: boolean;
+  donePages: number | null;
+  onAdd: () => void;
+}) {
+  const base = 'flex items-center gap-1.5 text-[11.5px] font-semibold px-3 py-1 rounded-full whitespace-nowrap';
+  if (busy) {
+    return (
+      <span className={base} style={{ background: 'var(--bg-2)', color: 'var(--accent)' }} data-testid="wiki-chip-busy">
+        <Loader2 size={11} strokeWidth={2} className="animate-spin" /> Adding…
+      </span>
+    );
+  }
+  if (donePages !== null) {
+    return (
+      <span className={base} style={{ border: '0.5px solid var(--hairline)', color: 'var(--text-mid)', fontWeight: 500 }} data-testid="wiki-chip-done">
+        <Check size={11} strokeWidth={2.4} style={{ color: 'var(--success, #34a853)' }} />
+        In wiki{donePages > 0 ? ` · ${donePages} page${donePages === 1 ? '' : 's'}` : ''}
+      </span>
+    );
+  }
+  if (unbuilt === false) {
+    return (
+      <button
+        onClick={onAdd}
+        className={`${base} cursor-pointer`}
+        style={{ border: '0.5px solid var(--hairline)', color: 'var(--text-mid)', fontWeight: 500, background: 'transparent' }}
+        title="Already digested — click to run again"
+        data-testid="wiki-chip-in"
+      >
+        <Check size={11} strokeWidth={2.4} style={{ color: 'var(--success, #34a853)' }} /> In wiki
+      </button>
+    );
+  }
+  return (
+    <button
+      onClick={onAdd}
+      className={`${base} cursor-pointer`}
+      style={{ background: 'var(--accent)', color: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.15)', border: 'none' }}
+      title="The AI reads this note, shows its plan, and updates the wiki after your approval"
+      data-testid="wiki-chip-add"
+    >
+      <Sparkles size={11} strokeWidth={2} /> Add to wiki
+    </button>
   );
 }

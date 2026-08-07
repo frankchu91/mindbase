@@ -15,7 +15,7 @@ interface OpRunProps {
   onOpenArticle: (slug: string, path: string) => void;
   onClose: () => void;
   /** Fires once when the op finishes applying (files were written). */
-  onDone?: () => void;
+  onDone?: (applied?: string[]) => void;
 }
 
 interface PlanState {
@@ -54,7 +54,7 @@ export function OpRun({ op, initialText = '', onOpenArticle, onClose, onDone }: 
       setFailed(ev.failed);
       if (ev.note) setNote(ev.note);
       setStage('done');
-      onDone?.();
+      onDone?.(ev.applied);
     } else if (ev.kind === 'findings') {
       setFindings(ev.findings);
       setStage('done');

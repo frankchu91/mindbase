@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { readFile, writeFile, mkdir, rename, unlink } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename, unlink, stat } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import type { ServerContext } from '../../context.js';
 import { projectRoot as makeProjectRoot, detectLayoutVersion } from '../../context.js';
@@ -90,8 +90,10 @@ export function crudRoutes(ctx: ServerContext): Router {
     }
     const disk = resolveTreePath(category, relPath, user);
     try {
-      const body = await readFile(join(ctx.dataDir, 'projects', projectId, disk), 'utf-8');
-      return res.json({ category, path: raw, body, meta: {} });
+      const abs = join(ctx.dataDir, 'projects', projectId, disk);
+      const body = await readFile(abs, 'utf-8');
+      const mtime = new Date((await stat(abs)).mtimeMs).toISOString();
+      return res.json({ category, path: raw, body, mtime, meta: {} });
     } catch {
       return res.status(404).json({ error: 'Not found', category, path: raw });
     }
