@@ -21,6 +21,10 @@ describe('tree list routes', () => {
     await writeFile(join(proj, 'context.md'), '# ctx');
     await writeFile(join(proj, 'index.yaml'), 'project:\n  id: test-proj\n');
     await writeFile(join(proj, 'sources', 'contributors', 'alice', '2026-06-09.md'), 'hi');
+    await mkdir(join(proj, 'sources', 'contributors', 'alice', 'notes'), { recursive: true });
+    await writeFile(join(proj, 'sources', 'contributors', 'alice', 'notes', 'my-idea.md'), '# My Big Idea\n\nbody');
+    await writeFile(join(proj, 'sources', 'contributors', 'alice', 'notes', 'untitled-x.md'), 'no heading here');
+    await writeFile(join(proj, 'sources', 'contributors', 'alice', 'notes', 'readme.txt'), 'not md');
     await writeFile(join(proj, 'sources', 'research', 'rag.md'), 'notes');
     await writeFile(join(proj, 'logs', '2026-06-09.md'), 'log');
     await writeFile(join(dataDir, 'config.json'), JSON.stringify({ currentProjectId: 'test-proj' }));
@@ -41,14 +45,19 @@ describe('tree list routes', () => {
     const ids = res.body.categories.map((c: { id: string }) => c.id);
     expect(ids).toEqual(expect.arrayContaining(['readme', 'context', 'contributors', 'research', 'logs']));
     const contributors = res.body.categories.find((c: { id: string }) => c.id === 'contributors');
-    expect(contributors.count).toBe(1);
+    expect(contributors.count).toBe(3); // 1 daily file + 2 notes
     expect(contributors.users[0].name).toBe('alice');
+    expect(contributors.users[0].count).toBe(3);
   });
 
-  it('GET /contributors returns users grouping', async () => {
+  it('GET /contributors returns users grouping with daily files and notes', async () => {
     const res = await request(app).get('/api/tree/contributors');
     expect(res.status).toBe(200);
-    expect(res.body.users.alice[0].date).toBe('2026-06-09');
+    expect(res.body.users.alice.files[0].date).toBe('2026-06-09');
+    const notes = res.body.users.alice.notes as Array<{ slug: string; title: string }>;
+    expect(notes).toHaveLength(2); // .txt skipped
+    expect(notes.find((n) => n.slug === 'my-idea')?.title).toBe('My Big Idea');
+    expect(notes.find((n) => n.slug === 'untitled-x')?.title).toBe('untitled-x'); // no H1 → slug
   });
 
   it('GET /research returns flat file list', async () => {

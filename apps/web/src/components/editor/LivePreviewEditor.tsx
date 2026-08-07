@@ -53,11 +53,16 @@ async function fetchWikiSlugs(): Promise<Array<{ slug: string; title: string }>>
       fetch('/api/tree/research').then((r) => (r.ok ? r.json() : { files: [] })),
     ]);
     const items: Array<{ slug: string; title: string }> = [];
-    const users = (contributorsRes as { users?: Record<string, Array<{ date: string }>> }).users ?? {};
-    for (const [user, days] of Object.entries(users)) {
-      for (const d of days) {
+    const users = (contributorsRes as {
+      users?: Record<string, { files?: Array<{ date: string }>; notes?: Array<{ slug: string; title: string }> }>;
+    }).users ?? {};
+    for (const [user, listing] of Object.entries(users)) {
+      for (const d of listing.files ?? []) {
         const key = `${user}/${d.date}`;
         items.push({ slug: key, title: key });
+      }
+      for (const n of listing.notes ?? []) {
+        items.push({ slug: `${user}/notes/${n.slug}`, title: n.title });
       }
     }
     const research = (researchRes as { files?: Array<{ slug: string; title?: string }> }).files ?? [];
@@ -77,6 +82,12 @@ async function fetchWikiSlugs(): Promise<Array<{ slug: string; title: string }>>
 interface Props {
   initialContent: string;
   slug: string;
+  /**
+   * Where autosave PUTs, as a tree-API route suffix like
+   * 'contributors/<user>/notes/<slug>.md'. Falls back to the legacy
+   * 'research/<slug>.md' when omitted (WikiEditor's Phase E convention).
+   */
+  savePath?: string;
   onSave: (content: string) => void;
   onCancel: () => void;
   onModeChange: (mode: EditorMode) => void;
@@ -193,6 +204,7 @@ function MilkdownInner({
 export function LivePreviewEditor({
   initialContent,
   slug,
+  savePath,
   onSave,
   onCancel,
   onModeChange,
@@ -209,8 +221,10 @@ export function LivePreviewEditor({
   // read the latest props (avoids stale-closure bugs when title changes).
   const transformBeforeSaveRef = useRef(transformBeforeSave);
   const onMarkdownChangeRef = useRef(onMarkdownChange);
+  const savePathRef = useRef(savePath);
   useEffect(() => { transformBeforeSaveRef.current = transformBeforeSave; }, [transformBeforeSave]);
   useEffect(() => { onMarkdownChangeRef.current = onMarkdownChange; }, [onMarkdownChange]);
+  useEffect(() => { savePathRef.current = savePath; }, [savePath]);
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savingRef = useRef(false);
@@ -376,10 +390,7 @@ export function LivePreviewEditor({
       const raw = markdownRef.current;
       const content = transformBeforeSaveRef.current ? transformBeforeSaveRef.current(raw) : raw;
       const username = localStorage.getItem('mindbase-username') ?? '';
-      // TODO(v2): LivePreviewEditor is called with a bare slug — default to
-      // research per Phase E convention. When callers pass {category, path}
-      // explicitly, thread them through Props like WikiEditor does.
-      const res = await fetch(`/api/tree/research/${slug}.md`, {
+      const res = await fetch(`/api/tree/${savePathRef.current ?? `research/${slug}.md`}`, {
         method: 'PUT',
         headers: { 'content-type': 'application/json', 'x-mindbase-user': username },
         body: JSON.stringify({ body: content }),

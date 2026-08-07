@@ -12,6 +12,7 @@ import { CommandPalette } from './components/CommandPalette';
 import { IndexingToast } from './components/IndexingToast';
 import { AddEntryModal } from './components/AddEntryModal';
 import { ToastHost } from './components/Toast';
+import { showToast } from './store/toast';
 
 // Phase E wiki v2: known tree categories that MAY appear as the first arg of
 // onOpenArticle / onOpenNote. Anything not in this set is treated as a legacy
@@ -66,12 +67,33 @@ export default function App() {
     setWikiReloadKey((k) => k + 1);
   }
 
-  // "New draft" / Cmd+N / palette "New note" → open the Cmd+I AddEntryModal.
-  // In wiki v2 there is no user-authored notes surface — every entry appends
-  // to today's contributor file.
+  // "New draft" / Cmd+N / palette "New note" → create a real note file under
+  // the user's contributor layer (sources/contributors/<user>/notes/) and
+  // open it in the full NotePane editor. Quick capture stays on Cmd+I.
   const handleNewNote = useCallback(() => {
-    setAddEntryOpen(true);
-  }, []);
+    void (async () => {
+      try {
+        let user = localStorage.getItem('mindbase-username') ?? '';
+        if (!user) {
+          // Solo projects usually have exactly one contributor dir — reuse it.
+          const r = await fetch('/api/tree/contributors');
+          const users = r.ok ? Object.keys(((await r.json()) as { users?: Record<string, unknown> }).users ?? {}) : [];
+          user = users[0] ?? 'me';
+        }
+        const path = `${user}/notes/untitled-${Date.now().toString(36)}.md`;
+        const res = await fetch(`/api/tree/contributors/${path}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ body: '' }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        onWikiChanged();
+        navigate({ kind: 'note', slug: path.replace(/\.md$/, ''), path, category: 'contributors', autofocus: true });
+      } catch (e) {
+        showToast(`New note failed: ${(e as Error).message}`, 'error');
+      }
+    })();
+  }, [navigate]);
 
   // Onboarding load
   useEffect(() => {

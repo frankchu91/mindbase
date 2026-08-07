@@ -107,6 +107,12 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
   // Contribute-op card state: the note body snapshot taken when ✨ Process
   // was clicked (null = card closed).
   const [processText, setProcessText] = useState<string | null>(null);
+  // User-authored full note (sources/contributors/<user>/notes/*)?
+  const isUserNote = category === 'contributors' && /^[^/]+\/notes\//.test(path);
+  const isUntitledFile = isUserNote && /\/untitled-[^/]+\.md$/.test(path);
+  const [processHintDismissed, setProcessHintDismissed] = useState(
+    () => localStorage.getItem(`mindbase.processHint.${slugFromPath(path)}`) === '1',
+  );
 
   // Reactive subscription so the RightRail tab can show "Backlinks · N" as soon
   // as the panel's fetch lands.
@@ -198,6 +204,35 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
       setSaving(false);
     }
   }, [category, path, bodyInitial, saving, onWikiChanged]);
+
+  // First real title on a freshly created note → rename untitled-<x>.md to
+  // the slugified title so the tree shows a meaningful name. Non-fatal on
+  // collision: the file simply keeps its untitled name.
+  const renameFromTitle = useCallback(async () => {
+    if (!isUntitledFile) return;
+    const t = titleStateRef.current.trim();
+    if (!t) return;
+    // Flush pending content to the current path first so the rename moves
+    // the finished file, not a stale one.
+    await doSave();
+    const slug = t.toLowerCase().replace(/[^a-z0-9一-鿿]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 64);
+    if (!slug) return;
+    const user = path.split('/')[0]!;
+    const newPath = `${user}/notes/${slug}.md`;
+    if (newPath === path) return;
+    try {
+      const res = await fetch(`/api/tree/contributors/${path}/rename`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPath }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      useCanvasRoute.getState().replace({ kind: 'note', slug: slugFromPath(newPath), path: newPath, category, autofocus: false });
+      onWikiChanged();
+    } catch {
+      // Keep the untitled filename; the H1 title still displays everywhere.
+    }
+  }, [isUntitledFile, path, category, onWikiChanged, doSave]);
 
   // Debounced save for title-only changes (1s)
   useEffect(() => {
@@ -410,8 +445,21 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
             <Code2 size={11} strokeWidth={1.8} /> Source
           </button>
         </div>
+        {isUserNote && !processHintDismissed && sourceBody.length >= 200 && (
+          <span
+            className="text-[11px] px-2 py-0.5 rounded-full"
+            style={{ background: 'var(--bg-2)', color: 'var(--text-mid)', border: '0.5px solid var(--hairline)' }}
+            data-testid="process-hint"
+          >
+            Ready? ✨ Process files this into the wiki →
+          </span>
+        )}
         <button
           onClick={() => {
+            if (isUserNote && !processHintDismissed) {
+              localStorage.setItem(`mindbase.processHint.${slug}`, '1');
+              setProcessHintDismissed(true);
+            }
             const body = getBodyRef.current?.() ?? sourceBody;
             const text = [titleStateRef.current, body].filter(Boolean).join('\n\n').trim();
             setProcessText(text || ' ');
@@ -455,6 +503,7 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
               value={title}
               onChange={(e) => onTitleChange(e.target.value)}
               onKeyDown={onTitleKeyDown}
+              onBlur={() => void renameFromTitle()}
               placeholder="Untitled"
               className="w-full text-[40px] leading-tight font-bold bg-transparent outline-none mb-6"
               style={{ color: 'var(--text-primary)' }}
@@ -474,6 +523,7 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
                   key={slug}
                   initialContent={bodyInitial}
                   slug={slug}
+                  savePath={`${category}/${path}`}
                   onSave={() => { /* internal */ }}
                   onCancel={onClose}
                   onModeChange={() => { /* mode toggle lives in NotePane's top bar now */ }}

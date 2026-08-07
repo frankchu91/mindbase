@@ -11,7 +11,7 @@
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run src/lib src/ops",
+    "test": "vitest run src/lib src/ops src/routes/tree",
     "test:e2e": "vitest run test/"
   },
   "dependencies": {

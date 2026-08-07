@@ -45,17 +45,31 @@ export function crudRoutes(ctx: ServerContext): Router {
     const projectId = ctx.currentProjectId;
     const layout = await detectLayoutVersion(makeProjectRoot(ctx.dataDir, projectId));
     if (layout === 'v1') return res.status(409).json({ error: 'V1_LAYOUT_UNSUPPORTED', projectId });
-    const relPath = wildcardPath(req);
-    const newPath = req.body?.newPath as string | undefined;
-    if (!newPath || !isPathSafe(relPath) || !isPathSafe(newPath)) return res.status(400).json({ error: 'Invalid path' });
-    const user = resolveUser(req);
-    const oldDisk = resolveTreePath(category, relPath, user);
-    const newDisk = resolveTreePath(category, newPath, user);
-    const oldAbs = join(ctx.dataDir, 'projects', projectId, oldDisk);
-    const newAbs = join(ctx.dataDir, 'projects', projectId, newDisk);
-    await mkdir(dirname(newAbs), { recursive: true });
-    await rename(oldAbs, newAbs);
-    return res.json({ category, oldPath: relPath, newPath });
+    const rawOld = wildcardPath(req);
+    const rawNew = req.body?.newPath as string | undefined;
+    if (!rawNew || !isPathSafe(rawOld) || !isPathSafe(rawNew)) return res.status(400).json({ error: 'Invalid path' });
+    // Contributors paths arrive as <user>/<rest> — split like GET/PUT do,
+    // otherwise the header user gets prepended twice.
+    let oldUser = resolveUser(req);
+    let newUser = oldUser;
+    let relOld = rawOld;
+    let relNew = rawNew;
+    if (category === 'contributors') {
+      const o = splitContributorPath(rawOld);
+      const n = splitContributorPath(rawNew);
+      if (o.user) { oldUser = o.user; relOld = o.relPath; }
+      if (n.user) { newUser = n.user; relNew = n.relPath; }
+    }
+    const oldAbs = join(ctx.dataDir, 'projects', projectId, resolveTreePath(category, relOld, oldUser));
+    const newAbs = join(ctx.dataDir, 'projects', projectId, resolveTreePath(category, relNew, newUser));
+    try {
+      await mkdir(dirname(newAbs), { recursive: true });
+      await rename(oldAbs, newAbs);
+    } catch (e) {
+      const code = (e as NodeJS.ErrnoException).code;
+      return res.status(code === 'ENOENT' ? 404 : 500).json({ error: (e as Error).message });
+    }
+    return res.json({ category, oldPath: rawOld, newPath: rawNew });
   });
 
   router.get('/:category/*', async (req, res) => {

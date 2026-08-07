@@ -5,10 +5,36 @@ import type { ServerContext } from '../../context.js';
 import { projectPaths } from '@mindbase/core';
 import { projectRoot as makeProjectRoot, detectLayoutVersion } from '../../context.js';
 
-async function listByUser(projectRoot: string): Promise<Record<string, Array<{ date: string; size: number; mtime: string }>>> {
+export interface ContributorNote { slug: string; title: string; size: number; mtime: string }
+export interface ContributorListing {
+  files: Array<{ date: string; size: number; mtime: string }>;
+  notes: ContributorNote[];
+}
+
+async function listUserNotes(userDir: string): Promise<ContributorNote[]> {
+  const notesDir = join(userDir, 'notes');
+  let entries: string[] = [];
+  try { entries = await readdir(notesDir); } catch { return []; }
+  const notes: ContributorNote[] = [];
+  for (const e of entries) {
+    if (!e.endsWith('.md')) continue;
+    const abs = join(notesDir, e);
+    const s = await stat(abs);
+    const slug = e.replace(/\.md$/, '');
+    let title = slug;
+    try {
+      const heading = (await readFile(abs, 'utf-8')).match(/^#\s+(.+)$/m)?.[1]?.trim();
+      if (heading) title = heading;
+    } catch { /* keep slug */ }
+    notes.push({ slug, title, size: s.size, mtime: new Date(s.mtimeMs).toISOString() });
+  }
+  return notes.sort((a, b) => (a.mtime > b.mtime ? -1 : 1));
+}
+
+async function listByUser(projectRoot: string): Promise<Record<string, ContributorListing>> {
   const p = projectPaths();
   const usersRoot = join(projectRoot, p.contributorsRoot);
-  const result: Record<string, Array<{ date: string; size: number; mtime: string }>> = {};
+  const result: Record<string, ContributorListing> = {};
   let users: string[] = [];
   try { users = await readdir(usersRoot); } catch { return result; }
   for (const user of users) {
@@ -21,7 +47,10 @@ async function listByUser(projectRoot: string): Promise<Record<string, Array<{ d
       const s = await stat(join(userDir, e));
       files.push({ date: e.replace(/\.md$/, ''), size: s.size, mtime: new Date(s.mtimeMs).toISOString() });
     }
-    result[user] = files.sort((a, b) => (a.date > b.date ? -1 : 1));
+    result[user] = {
+      files: files.sort((a, b) => (a.date > b.date ? -1 : 1)),
+      notes: await listUserNotes(userDir),
+    };
   }
   return result;
 }
@@ -69,7 +98,7 @@ export function listRoutes(ctx: ServerContext): Router {
     const artifacts: string[] = [];
     try { artifacts.push(...(await readdir(join(root, p.artifactsRoot)))); } catch { /* ok */ }
 
-    const contributorCount = Object.values(contributors).reduce((a, v) => a + v.length, 0);
+    const contributorCount = Object.values(contributors).reduce((a, v) => a + v.files.length + v.notes.length, 0);
 
     return res.json({
       project: projectId,
@@ -85,10 +114,10 @@ export function listRoutes(ctx: ServerContext): Router {
         {
           id: 'contributors',
           count: contributorCount,
-          users: Object.entries(contributors).map(([name, files]) => ({
+          users: Object.entries(contributors).map(([name, listing]) => ({
             name,
-            count: files.length,
-            latest: files[0]?.date ?? null,
+            count: listing.files.length + listing.notes.length,
+            latest: listing.files[0]?.date ?? null,
           })),
         },
         { id: 'research', count: research.length },

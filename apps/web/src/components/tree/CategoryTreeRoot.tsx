@@ -69,7 +69,7 @@ export function CategoryTreeRoot({ reloadKey = 0, onOpen }: Props) {
           onOpen={onOpen}
           expanded={expanded.has(cat.id)}
           toggle={() => toggle(cat.id)}
-          mutateKey={mutateKey}
+          mutateKey={mutateKey + reloadKey}
           onMutate={() => setMutateKey((k) => k + 1)}
         />
       ))}
@@ -227,42 +227,52 @@ function CategoryChildren({
   if (!data) return <div style={{ paddingLeft: 24, color: 'var(--text-faint)', fontSize: 12 }}>…</div>;
 
   if (cat.id === 'contributors') {
-    const users = (data as { users: Record<string, Array<{ date: string }>> }).users ?? {};
+    interface UserListing { files?: Array<{ date: string }>; notes?: Array<{ slug: string; title: string }> }
+    const users = (data as { users: Record<string, UserListing> }).users ?? {};
     const names = Object.keys(users);
     if (names.length === 0) return null;
-    if (names.length === 1) {
-      const only = names[0]!;
+
+    const rows = (user: string, indent: number) => {
+      const listing = users[user]!;
+      const pad = (extra = 0) => ({ cursor: 'pointer', fontSize: 12, padding: `2px 8px 2px ${indent + extra}px`, color: 'var(--text-default)' } as const);
       return (
         <>
-          {users[only]!.map((f) => (
+          {(listing.notes ?? []).map((n) => (
+            <div
+              key={`note-${n.slug}`}
+              onClick={() => onOpen('contributors', `${user}/notes/${n.slug}.md`)}
+              style={pad()}
+              data-testid="tree-user-note"
+              title={n.title}
+            >
+              📝 {n.title}
+            </div>
+          ))}
+          {(listing.files ?? []).map((f) => (
             <div
               key={f.date}
-              onClick={() => onOpen('contributors', `${only}/${f.date}.md`)}
-              style={{ cursor: 'pointer', fontSize: 12, padding: '2px 8px 2px 24px', color: 'var(--text-default)' }}
+              onClick={() => onOpen('contributors', `${user}/${f.date}.md`)}
+              style={pad()}
             >
               {f.date}
             </div>
           ))}
         </>
       );
-    }
+    };
+
+    if (names.length === 1) return rows(names[0]!, 24);
     return (
       <>
         {names.map((user) => (
           <div key={user} style={{ paddingLeft: 24 }}>
             <div style={{ fontSize: 12, color: 'var(--text-mid)', padding: '2px 0' }}>
               {user}{' '}
-              <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>{users[user]!.length}</span>
+              <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>
+                {(users[user]!.files?.length ?? 0) + (users[user]!.notes?.length ?? 0)}
+              </span>
             </div>
-            {users[user]!.map((f) => (
-              <div
-                key={f.date}
-                onClick={() => onOpen('contributors', `${user}/${f.date}.md`)}
-                style={{ cursor: 'pointer', fontSize: 12, padding: '2px 8px 2px 12px', color: 'var(--text-default)' }}
-              >
-                {f.date}
-              </div>
-            ))}
+            {rows(user, 12)}
           </div>
         ))}
       </>
