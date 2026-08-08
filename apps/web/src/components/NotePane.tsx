@@ -122,7 +122,17 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
   // as the panel's fetch lands.
   const backlinksCount = useBacklinksCache((s) => s.counts[slug]);
 
-  const titleRef = useRef<HTMLInputElement>(null);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-grow the title textarea (titles wrap instead of clipping — a
+  // 40px single-line <input> truncated after ~14 characters next to the
+  // right rail).
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [title, loading]);
   const getBodyRef = useRef<(() => string) | null>(null);
   const setBodyRef = useRef<((md: string) => void) | null>(null);
   const titleDirtyRef = useRef(false);
@@ -380,7 +390,7 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
     saveViewMode(slug, next);
   }
 
-  function onTitleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+  function onTitleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' || (e.key === 'ArrowDown' && titleRef.current?.selectionStart === title.length)) {
       // Move focus into the editor body
       e.preventDefault();
@@ -509,15 +519,15 @@ export function NotePane({ category, path, onClose, onWikiChanged, onOpenArticle
                 and date, so classify always fails with "note not found". */}
 
             {/* Title */}
-            <input
+            <textarea
               ref={titleRef}
-              type="text"
+              rows={1}
               value={title}
-              onChange={(e) => onTitleChange(e.target.value)}
+              onChange={(e) => onTitleChange(e.target.value.replace(/\n/g, ' '))}
               onKeyDown={onTitleKeyDown}
               onBlur={() => void renameFromTitle()}
               placeholder="Untitled"
-              className="w-full text-[40px] leading-tight font-bold bg-transparent outline-none mb-6"
+              className="w-full text-[40px] leading-tight font-bold bg-transparent outline-none mb-6 resize-none overflow-hidden"
               style={{ color: 'var(--text-primary)' }}
               spellCheck={false}
             />
