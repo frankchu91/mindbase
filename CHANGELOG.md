@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.4.0 (2026-08-07)
+
+### Added — write full notes in the UI
+
+- **Cmd+N (or "+" → New note)** creates a real note and opens it in the
+  full WYSIWYG editor — headings, GFM, markdown links, `[[wikilink]]`
+  autocomplete, outline, backlinks. Previously every "new note" path
+  dead-ended in the quick-capture textarea.
+- Notes live in **your** layer (`sources/contributors/<user>/notes/`),
+  so the AI never rewrites them — it digests them into the wiki on
+  Rebuild, or on demand. The first title you type becomes the filename.
+- **Wiki-status chip** replaces the old "Process" button: a note newer
+  than the last build shows **✨ Add to wiki**; while the AI works it
+  shows **Adding…**; after your approval it flips to **✓ In wiki · N
+  pages**. Editing the note lights the chip up again. The status reuses
+  the build pipeline's own newer-than-context rule — no separate state
+  to drift.
+- `Cmd+I` quick capture is unchanged: log a line in 3 seconds vs sit
+  down and write — two different verbs, now two different surfaces.
+
+### Fixed
+
+- WYSIWYG body edits silently saved a copy of every note into the
+  LLM-owned `sources/research/` layer (hardcoded legacy path) — user
+  content no longer leaks across the layer boundary.
+- Renaming a contributor file doubled the user segment in the path and
+  the failed rename crashed the server process.
+- The file tree didn't refresh after renames/creates from outside it.
+
 ## 0.3.0 (2026-08-06)
 
 ### Added — Web UI runs the core operations

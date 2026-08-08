@@ -32,6 +32,7 @@ MindBase implements Andrej Karpathy's [LLM-Wiki pattern](https://x.com/karpathy/
 ## Table of contents
 
 - [Why MindBase](#why-mindbase)
+- [What's new](#whats-new)
 - [How it works (30 seconds)](#how-it-works-30-seconds)
 - [What makes it different](#what-makes-it-different)
 - [Prerequisites](#prerequisites)
@@ -66,6 +67,37 @@ You read a lot. Papers, articles, tweets, docs. You want to remember them, conne
 **MindBase is the third option:** the LLM actively maintains a persistent, structured wiki as you feed it sources. Knowledge compounds. Your `context.md` gets sharper every time you contribute. The AI *remembers you across sessions* because your beliefs are written down in markdown files — not stored in a chat history that gets summarized away.
 
 Think of it as **a personal Wikipedia that an AI intern writes for you**, kept up to date, cross-referenced, and honest about what it doesn't know.
+
+---
+
+## What's new
+
+**0.4.0 — Write full notes in the UI** *(2026-08-07)*
+`Cmd+N` opens a real WYSIWYG editor (headings, links, `[[wikilinks]]`,
+outline, backlinks). Notes live in *your* layer — the AI reads them but
+never rewrites them. A **wiki-status chip** on every note shows whether
+the wiki has absorbed it yet: **✨ Add to wiki** → **✓ In wiki · 2 pages**.
+
+**0.3.0 — The Web UI runs the core operations** *(2026-08-06)*
+`/contribute`, `/build`, `/lint`, `/research` now work in the browser,
+orchestrated server-side with whatever LLM you configure. Contribute
+shows takeaways + a checkbox plan and only writes what you approve. The
+Health view surfaces contradictions, orphans, and gaps as cards. Also
+fixed: chat retrieval now actually indexes your wiki (it was silently
+empty on new-layout projects).
+
+**0.2.0 — Free local models, no API key** *(2026-08-06)*
+The setup wizard detects your hardware, recommends the best Ollama model
+that fits your RAM, installs it with a progress bar, and verifies it with
+a real generation. MindBase now works end-to-end with zero subscriptions
+and zero data leaving your machine.
+
+**0.1.x — First public release** *(2026-07)*
+MCP server on npm (`mindbase-mcp`), Claude Code plugin with slash
+commands + sub-agents, works in Cursor/Windsurf/Cline/Continue, local
+PDF/URL ingestion, hybrid search, knowledge graph, web viewer.
+
+Full details in [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
@@ -525,7 +557,7 @@ The LLM passes `projectId: "ai-agents"` to the MCP tool call. Current project un
 
 ## Web UI (optional companion)
 
-MindBase includes a browser-based viewer at `http://localhost:4321`. It's not required — the plugin/MCP path is the primary interface — but useful for **browsing** what the LLM has written.
+MindBase includes a browser-based app at `http://localhost:4321`. It's not required — the plugin/MCP path is the primary interface — but since 0.3/0.4 it stands on its own: write notes, run the AI operations, browse what the LLM has written.
 
 <p align="center">
   <img alt="MindBase web UI — category tree on the left, the LLM-maintained context.md in the center, chat starters on the right" src="docs/assets/webui.png" width="920">
@@ -545,8 +577,9 @@ pnpm --filter @mindbase/server dev
 
 You'll see:
 - **LeftRail tree:** Contributors, Research, Logs, Artifacts, README, Context, Raw — organized as a file tree
-- **Article view:** click any file to read it; edit inline
+- **`Cmd+N` New note:** a full WYSIWYG editor (headings, GFM, links, `[[wikilink]]` autocomplete) writing into your contributor layer; each note carries a **wiki-status chip** (✨ Add to wiki → ✓ In wiki)
 - **`Cmd+I` AddEntry:** quick capture that appends to today's contributor file (works in any browser tab)
+- **Article view:** click any file to read it; edit inline
 - **Search (`Cmd+K`):** keyword search across your wiki
 - **Project switcher:** dropdown at the top
 
