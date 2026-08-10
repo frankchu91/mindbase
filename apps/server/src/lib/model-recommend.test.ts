@@ -19,10 +19,18 @@ describe('recommendModels', () => {
     expect(recs.map((r) => r.tier)).toContain('best');
   });
 
-  it('32GB machine defaults to qwen3:14b with the MoE as best tier', () => {
+  it('32GB Apple Silicon defaults to qwen3:14b with Muse Glimmer as best tier', () => {
     const recs = recommendModels(mac(32));
     expect(recs[0]!.model).toBe('qwen3:14b');
-    expect(recs.find((r) => r.tier === 'best')!.model).toBe('qwen3:30b-a3b');
+    expect(recs.find((r) => r.tier === 'best')!.model).toBe('muse-glimmer:30b-mlx');
+    // MoE stays available but no longer claims the best slot
+    expect(recs.find((r) => r.model === 'qwen3:30b-a3b')!.tier).toBe('balanced');
+  });
+
+  it('Glimmer is MLX-only: never offered on non-Apple-Silicon or <32GB', () => {
+    const linux = recommendModels({ platform: 'linux', arch: 'x64', totalMemGB: 64, cpuModel: 'i9', appleSilicon: false });
+    expect(linux.some((r) => r.model.startsWith('muse-glimmer'))).toBe(false);
+    expect(recommendModels(mac(24)).some((r) => r.model.startsWith('muse-glimmer'))).toBe(false);
   });
 
   it('non-Apple-Silicon reasons mention slower CPU inference', () => {

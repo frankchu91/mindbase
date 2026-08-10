@@ -26,11 +26,26 @@ export function recommendModels(p: SystemProfile): ModelRec[] {
       { model: 'llama3.2:3b', downloadGB: 2, tier: 'minimal', reason: 'Smallest and fastest; basic capture only.' },
     ];
   }
-  return [
+  const out: ModelRec[] = [
     { model: 'qwen3:14b', downloadGB: 9, tier: 'balanced', reason: `Best all-rounder for ${p.totalMemGB}GB RAM — strong summaries, stable structured output.${slower}` },
     { model: 'qwen3:30b-a3b', downloadGB: 19, tier: 'best', reason: `Mixture-of-experts: near-30B quality at 8B-like speed. Uses ~20GB while running.${slower}` },
     { model: 'qwen3:8b', downloadGB: 5, tier: 'minimal', reason: 'Lighter and faster; fine for capture and search.' },
   ];
+  // Meta's Muse Glimmer (30B dense, Apache 2.0, tuned for agentic/structured
+  // work) ships MLX-only for now — offer it exclusively on Apple Silicon
+  // with the RAM to hold ~20GB while running.
+  if (p.appleSilicon && p.totalMemGB >= 32) {
+    out.splice(1, 0, {
+      model: 'muse-glimmer:30b-mlx',
+      downloadGB: 21,
+      tier: 'best',
+      reason: `Meta's open-weight 30B, tuned for agentic + structured output — a strong fit for wiki synthesis on ${p.totalMemGB}GB Apple Silicon. Uses ~20GB while running.`,
+    });
+    // Only one 'best' pick per list: demote the MoE alternative.
+    const moe = out.find((r) => r.model === 'qwen3:30b-a3b');
+    if (moe) moe.tier = 'balanced';
+  }
+  return out;
 }
 
 /** Every tag the pull route may fetch — the union across all hardware tiers. */
