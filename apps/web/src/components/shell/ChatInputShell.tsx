@@ -1,7 +1,10 @@
 import { useRef, useEffect, useState } from 'react';
-import { Paperclip, AtSign, Slash, Send } from 'lucide-react';
+import { Paperclip, AtSign, Slash, Send, Check, Settings as SettingsIcon } from 'lucide-react';
 import { SlashMenu, matchSlashCommands, type SlashCommand } from '../ops/SlashMenu';
 import type { OpName } from '../ops/ops-types';
+import { apiGet, apiPut } from '../../lib/api';
+import { useSettings } from '../../store/settings';
+import { showToast } from '../../store/toast';
 
 interface ChatInputShellProps {
   value: string;
@@ -34,6 +37,38 @@ export function ChatInputShell({
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   const [rows, setRows] = useState(1);
   const [slashIndex, setSlashIndex] = useState(0);
+  // Quick model switcher: click the model badge → pick any installed
+  // local model. Cloud/provider changes still live in Settings.
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
+  const [localModels, setLocalModels] = useState<string[] | null>(null);
+  const provider = useSettings((s) => s.provider);
+
+  useEffect(() => {
+    if (!modelMenuOpen) return;
+    setLocalModels(null);
+    apiGet<{ state: string; models: string[] }>('/ollama/status')
+      .then((r) => setLocalModels(r.state === 'running' ? r.models : []))
+      .catch(() => setLocalModels([]));
+    const close = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest?.('[data-model-menu]')) setModelMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [modelMenuOpen]);
+
+  async function switchModel(model: string) {
+    setModelMenuOpen(false);
+    if (model === modelName && provider === 'ollama') return;
+    try {
+      const cfg = await apiGet<Record<string, unknown>>('/config');
+      await apiPut('/config', { ...cfg, provider: 'ollama', model });
+      useSettings.getState().setProvider('ollama');
+      useSettings.getState().setModel(model);
+      showToast(`Switched to ${model}`);
+    } catch (e) {
+      showToast(`Switch failed: ${(e as Error).message}`, 'error');
+    }
+  }
 
   const slashCommands = onRunOp ? matchSlashCommands(value) : [];
   const slashOpen = slashCommands.length > 0;
@@ -138,18 +173,64 @@ export function ChatInputShell({
           <IBtn onClick={onAttach} title="Attach file"><Paperclip size={13} strokeWidth={1.8} /></IBtn>
           <IBtn onClick={onMention} title="Reference a note"><AtSign size={13} strokeWidth={1.8} /></IBtn>
           <IBtn onClick={onSlashCommand} title="Slash commands"><Slash size={13} strokeWidth={1.8} /></IBtn>
-          <button
-            onClick={onModelClick}
-            className="ml-1 px-2 py-0.5 rounded text-[11px] cursor-pointer flex items-center gap-1"
-            style={{
-              background: 'var(--bg-2)',
-              color: 'var(--text-mid)',
-              fontFamily: '-apple-system, ui-monospace, monospace',
-            }}
-            data-testid="chat-model-picker"
-          >
-            {modelName}
-          </button>
+          <span className="relative ml-1" data-model-menu>
+            <button
+              onClick={() => (onModelClick ? onModelClick() : setModelMenuOpen((v) => !v))}
+              className="px-2 py-0.5 rounded text-[11px] cursor-pointer flex items-center gap-1"
+              style={{
+                background: modelMenuOpen ? 'var(--row-hover)' : 'var(--bg-2)',
+                color: 'var(--text-mid)',
+                fontFamily: '-apple-system, ui-monospace, monospace',
+              }}
+              title="Switch model"
+              data-testid="chat-model-picker"
+            >
+              {modelName}
+            </button>
+            {modelMenuOpen && (
+              <div
+                className="absolute left-0 overflow-hidden"
+                style={{
+                  bottom: '100%', marginBottom: 6, minWidth: 220,
+                  background: 'var(--input-bg)', border: '0.5px solid var(--hairline)',
+                  borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', zIndex: 40,
+                }}
+                data-testid="model-menu"
+              >
+                <div className="px-3 pt-2 pb-1" style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Local models
+                </div>
+                {localModels === null && (
+                  <div className="px-3 py-1.5" style={{ fontSize: 12, color: 'var(--text-faint)' }}>Loading…</div>
+                )}
+                {localModels?.length === 0 && (
+                  <div className="px-3 py-1.5" style={{ fontSize: 12, color: 'var(--text-faint)' }}>Ollama isn't running</div>
+                )}
+                {localModels?.map((m) => {
+                  const active = provider === 'ollama' && m === modelName;
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => void switchModel(m)}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-left cursor-pointer"
+                      style={{ fontSize: 12, color: 'var(--text-default)', fontFamily: 'ui-monospace, monospace', background: 'transparent' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--row-hover)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                      data-testid={`model-option-${m}`}
+                    >
+                      <span className="w-3.5">{active && <Check size={12} strokeWidth={2.4} style={{ color: 'var(--accent)' }} />}</span>
+                      {m}
+                    </button>
+                  );
+                })}
+                <div style={{ borderTop: '0.5px solid var(--hairline-soft)' }}>
+                  <div className="px-3 py-1.5 flex items-center gap-1.5" style={{ fontSize: 11, color: 'var(--text-faint)' }}>
+                    <SettingsIcon size={11} strokeWidth={1.8} /> Cloud models: Settings → Provider
+                  </div>
+                </div>
+              </div>
+            )}
+          </span>
           <button
             onClick={onSend}
             disabled={disabled || !value.trim()}
