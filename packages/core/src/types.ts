@@ -160,6 +160,8 @@ export interface ChatRequest {
 
 export type ChatChunk =
   | { kind: 'delta'; text: string }
+  /** Hidden-reasoning tokens from thinking models — progress signal, not answer text. */
+  | { kind: 'thinking'; text: string }
   | { kind: 'tool_call'; tool_call: ToolCall }
   | { kind: 'done'; usage: { input_tokens: number; output_tokens: number } }
   | { kind: 'error'; error: string };

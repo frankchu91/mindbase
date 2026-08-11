@@ -34,6 +34,8 @@ export type QAEvent =
   | { kind: 'progress'; phase: string; detail?: string }
   | { kind: 'sources'; sources: CitedSource[] }
   | { kind: 'delta'; text: string }
+  /** Reasoning stream from thinking models — show as progress, not answer text. */
+  | { kind: 'thinking'; text: string }
   | {
       kind: 'done';
       citations: Array<{ path: string; title: string }>;
@@ -248,6 +250,9 @@ export async function* askQuestion(opts: AskOptions): AsyncIterable<QAEvent> {
         case 'delta':
           textCollected += chunk.text;
           yield { kind: 'delta', text: chunk.text };
+          break;
+        case 'thinking':
+          yield { kind: 'thinking', text: chunk.text };
           break;
         case 'tool_call':
           pendingCalls.push(chunk.tool_call);

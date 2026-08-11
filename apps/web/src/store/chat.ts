@@ -20,6 +20,8 @@ export interface ChatMessage {
   citations?: Citation[];
   sources?: CitedSource[];
   progress?: string[]; // phases seen so far
+  /** Live tail of a thinking model's reasoning stream (cleared when the answer starts). */
+  thinking?: string | null;
   status: 'idle' | 'streaming' | 'done' | 'error';
   error?: string;
 }
@@ -30,6 +32,7 @@ interface ChatState {
   addAssistant: () => string;
   appendDelta: (id: string, delta: string) => void;
   addProgress: (id: string, phase: string) => void;
+  setThinking: (id: string, text: string | null) => void;
   setSources: (id: string, sources: CitedSource[]) => void;
   finish: (id: string, citations: Citation[], sources?: CitedSource[]) => void;
   fail: (id: string, error: string) => void;
@@ -59,7 +62,12 @@ export const useChat = create<ChatState>((set) => ({
   },
   appendDelta: (id, delta) =>
     set((s) => ({
-      messages: s.messages.map((m) => (m.id === id ? { ...m, text: m.text + delta } : m)),
+      // First answer token also clears the thinking indicator.
+      messages: s.messages.map((m) => (m.id === id ? { ...m, text: m.text + delta, thinking: null } : m)),
+    })),
+  setThinking: (id, text) =>
+    set((s) => ({
+      messages: s.messages.map((m) => (m.id === id ? { ...m, thinking: text } : m)),
     })),
   addProgress: (id, phase) =>
     set((s) => ({

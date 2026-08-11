@@ -38,6 +38,36 @@ describe('OllamaAdapter', () => {
     expect(done?.usage.output_tokens).toBe(2);
   });
 
+  it('sends think:false only for models where it truly disables reasoning', async () => {
+    const mockFetch = vi.fn().mockResolvedValue(
+      ndjsonResponse([JSON.stringify({ message: { content: 'x' }, done: true })]),
+    );
+    const adapter = new OllamaAdapter({ apiKey: '', model: 'qwen3:14b', fetchImpl: mockFetch as unknown as typeof fetch });
+    for await (const _c of adapter.chat({ model: 'qwen3:14b', messages: [{ role: 'user', content: 'hi' }] })) { /* drain */ }
+    expect(JSON.parse(mockFetch.mock.calls[0]![1]!.body as string).think).toBe(false);
+
+    mockFetch.mockClear();
+    mockFetch.mockResolvedValue(ndjsonResponse([JSON.stringify({ message: { content: 'x' }, done: true })]));
+    for await (const _c of adapter.chat({ model: 'muse-glimmer:30b-mlx', messages: [{ role: 'user', content: 'hi' }] })) { /* drain */ }
+    // On Glimmer/MLX think:false silently DISCARDS output — must be omitted.
+    expect('think' in JSON.parse(mockFetch.mock.calls[0]![1]!.body as string)).toBe(false);
+  });
+
+  it('surfaces message.thinking as thinking chunks', async () => {
+    const mockFetch = vi.fn().mockResolvedValue(
+      ndjsonResponse([
+        JSON.stringify({ message: { thinking: 'let me reason' }, done: false }),
+        JSON.stringify({ message: { content: 'answer' }, done: false }),
+        JSON.stringify({ message: { content: '' }, done: true, prompt_eval_count: 1, eval_count: 2 }),
+      ]),
+    );
+    const adapter = new OllamaAdapter({ apiKey: '', model: 'muse-glimmer:30b-mlx', fetchImpl: mockFetch as unknown as typeof fetch });
+    const chunks: ChatChunk[] = [];
+    for await (const c of adapter.chat({ model: 'muse-glimmer:30b-mlx', messages: [{ role: 'user', content: 'hi' }] })) chunks.push(c);
+    expect(chunks.some((c) => c.kind === 'thinking' && c.text === 'let me reason')).toBe(true);
+    expect(chunks.filter((c) => c.kind === 'delta').map((c) => (c as { text: string }).text).join('')).toBe('answer');
+  });
+
   it('uses baseUrl localhost:11434 by default', async () => {
     const mockFetch = vi.fn().mockResolvedValue(
       ndjsonResponse([JSON.stringify({ message: { content: '' }, done: true })]),

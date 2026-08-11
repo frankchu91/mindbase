@@ -20,7 +20,7 @@ interface ChatViewProps {
 }
 
 export function ChatView({ onWikiSaved, chatTitle, onNewChat, onOpenArticle, onOpenReview, chrome, registerSend }: ChatViewProps) {
-  const { messages, addUser, addAssistant, appendDelta, addProgress, setSources, finish, fail } = useChat();
+  const { messages, addUser, addAssistant, appendDelta, addProgress, setThinking, setSources, finish, fail } = useChat();
   const [input, setInput] = useState('');
   const [mode, setMode] = useState<InputMode>('chat');
   const [busy, setBusy] = useState(false);
@@ -161,6 +161,7 @@ export function ChatView({ onWikiSaved, chatTitle, onNewChat, onOpenArticle, onO
     const history = messages
       .filter((m) => m.status === 'done' && m.text)
       .map((m) => ({ role: m.role, text: m.text }));
+    let thinkingTail = '';
     apiSSE('/ask', { question: q, history }, (event) => {
       const e = event as QAEvent & { title?: string };
       switch (e.kind) {
@@ -173,6 +174,13 @@ export function ChatView({ onWikiSaved, chatTitle, onNewChat, onOpenArticle, onO
         case 'delta':
           appendDelta(asstId, e.text);
           break;
+        case 'thinking': {
+          // Show the live tail of the reasoning stream so thinking models
+          // (e.g. Muse Glimmer) don't look frozen while they reason.
+          thinkingTail = (thinkingTail + e.text).slice(-90);
+          setThinking(asstId, thinkingTail);
+          break;
+        }
         case 'done':
           finish(asstId, e.citations ?? [], e.sources);
           setBusy(false);

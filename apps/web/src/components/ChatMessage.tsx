@@ -134,6 +134,15 @@ export function ChatMessage({
             ))}
           </div>
         )}
+        {msg.status === 'streaming' && msg.thinking && (
+          <div
+            className="text-xs mb-2 italic"
+            style={{ color: 'var(--text-muted)', opacity: 0.8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+            data-testid="chat-thinking"
+          >
+            🧠 …{msg.thinking}
+          </div>
+        )}
         <div className={`prose prose-sm max-w-none ${isUser ? 'prose-invert' : ''}`}>
           {useRehypeRaw ? (
             <ReactMarkdown

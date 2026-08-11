@@ -6,10 +6,24 @@ interface OllamaToolCall {
 }
 
 interface OllamaStreamLine {
-  message?: { role?: string; content?: string; tool_calls?: OllamaToolCall[] };
+  message?: { role?: string; content?: string; thinking?: string; tool_calls?: OllamaToolCall[] };
   done?: boolean;
   prompt_eval_count?: number;
   eval_count?: number;
+}
+
+/**
+ * Models where `think: false` genuinely disables reasoning (verified:
+ * 88s → 1s on qwen3:14b). On other thinking models — Meta's Muse Glimmer
+ * on the MLX engine — `think: false` silently DISCARDS the reasoning
+ * tokens instead: the stream emits nothing for the whole think phase and
+ * the UI looks frozen. For those we leave thinking on and surface it as
+ * `thinking` chunks so consumers can show progress.
+ */
+const THINK_FALSE_DISABLES = /^(qwen3|deepseek-r1)/;
+
+function thinkParam(model: string): { think: false } | Record<string, never> {
+  return THINK_FALSE_DISABLES.test(model) ? { think: false } : {};
 }
 
 function toOllamaTools(tools: ToolDefinition[] | undefined) {
@@ -42,11 +56,7 @@ export class OllamaAdapter implements LLMAdapter {
           messages: request.messages,
           tools: toOllamaTools(request.tools),
           stream: true,
-          // Thinking-mode models (qwen3, deepseek-r1) otherwise spend minutes
-          // producing hidden `thinking` tokens while `content` stays empty —
-          // the UI looks frozen. 88s → ~1s for a greeting on qwen3:14b.
-          // No-op for models without a thinking mode.
-          think: false,
+          ...thinkParam(request.model),
           options: { temperature: request.temperature, num_predict: request.max_tokens },
         }),
       });
@@ -87,6 +97,10 @@ export class OllamaAdapter implements LLMAdapter {
           const content = parsed.message?.content;
           if (content) {
             yield { kind: 'delta', text: content };
+          }
+          const thinking = parsed.message?.thinking;
+          if (thinking) {
+            yield { kind: 'thinking', text: thinking };
           }
           if (parsed.message?.tool_calls) {
             for (const tc of parsed.message.tool_calls) {
@@ -136,7 +150,7 @@ export class OllamaAdapter implements LLMAdapter {
       const gen = await this.fetchImpl(`${this.baseUrl}/api/generate`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ model, prompt: 'hi', stream: false, think: false, options: { num_predict: 1 } }),
+        body: JSON.stringify({ model, prompt: 'hi', stream: false, ...thinkParam(model), options: { num_predict: 1 } }),
       });
       if (!gen.ok) return { ok: false, error: `Model '${model}' failed to respond: HTTP ${gen.status}` };
       return { ok: true };
