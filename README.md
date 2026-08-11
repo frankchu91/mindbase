@@ -607,6 +607,38 @@ installs Ollama if needed, pulls the model with a progress bar, and
 verifies it with a real generation before finishing. Cloud models still
 give deeper synthesis; the local path is a real, working default.
 
+### Muse Glimmer support (Meta's open-weight 30B)
+
+MindBase supports [Muse Glimmer](https://ollama.com/library/muse-glimmer)
+as a first-class local model. On Apple Silicon Macs with **32GB+ RAM** the
+setup wizard offers it as the *best*-tier pick, and the composer's model
+badge switches between it and qwen3 in two clicks.
+
+**Inference engine: Ollama ≥ 0.32.7.** That's the engine MindBase
+integrates, and the version floor is real — older Ollama rejects the pull
+with a 412. Glimmer currently runs through Ollama's **MLX engine**, which
+means **Apple Silicon only** for now (NVIDIA/AMD support is upstream work
+in progress — non-Mac machines won't be offered the model until then).
+
+How to use it well (measured on an M2 Pro, 32GB):
+
+| Task | Use | Why |
+|---|---|---|
+| Chat, `/contribute`, interactive work | `qwen3:14b` | ~30s responses. Glimmer takes minutes: ~60 tok/s prompt eval on MLX + an always-on reasoning phase. |
+| `/lint`, big `/build`, `/research` | `muse-glimmer:30b-mlx` | Slower but noticeably more grounded — its health-check findings quote the exact conflicting sentences instead of gesturing at them. |
+
+Two Glimmer-specific behaviors MindBase handles for you:
+
+- **Thinking can't be disabled.** Ollama's `think: false` silently
+  *discards* Glimmer's reasoning tokens instead of skipping them — the
+  stream goes quiet for the whole think phase. MindBase leaves thinking
+  on for Glimmer and streams it live in the chat UI (🧠 …) so it never
+  looks frozen.
+- **It follows instructions to the letter.** Great for structured wiki
+  operations (its JSON never broke a schema in our testing); it needs
+  explicit rules for conversational edge cases, which MindBase's prompts
+  provide.
+
 ---
 
 ## Feature matrix by editor
