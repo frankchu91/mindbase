@@ -62,7 +62,9 @@ EVERY factual claim in your answer MUST end with a citation marker like [1] or [
 
 Multi-source claim: [1][3]. Single-source claim: [1]. Place markers at end of sentences, before the period.
 
-If you cannot cite a claim from the sources provided, do not state the claim. If the wiki doesn't cover the answer, say so plainly without inventing facts.`;
+If you cannot cite a claim from the sources provided, do not state the claim. If the wiki doesn't cover the answer, say so plainly without inventing facts.
+
+EXCEPTION — small talk and meta questions: if the user greets you or asks about you rather than about their wiki ("hello", "who are you", "what can you do"), answer briefly and naturally in one or two sentences — you are MindBase, the assistant that maintains and answers from their personal wiki. No citations, and do not summarize the wiki material unless they asked about it.`;
 
 async function loadQAInstructions(store: Store): Promise<string> {
   try {
