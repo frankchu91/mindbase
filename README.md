@@ -1,4 +1,4 @@
-# MindBase
+# MindBase — Karpathy's LLM Wiki, as a product
 
 [![npm](https://img.shields.io/npm/v/mindbase-mcp?label=mindbase-mcp)](https://www.npmjs.com/package/mindbase-mcp)
 [![npm downloads](https://img.shields.io/npm/dw/mindbase-mcp)](https://www.npmjs.com/package/mindbase-mcp)
@@ -6,7 +6,7 @@
 [![Discussions](https://img.shields.io/badge/discussions-join-blue?logo=github)](https://github.com/frankchu91/mindbase/discussions)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-> **An AI research assistant that builds and maintains a wiki from your sources.** Not RAG-in-a-vector-DB. A real markdown wiki on your disk, that an LLM gardens for you between conversations.
+> **An open-source implementation of Andrej Karpathy's LLM Wiki idea: an AI that builds and maintains a wiki from your sources.** Not RAG-in-a-vector-DB. A real markdown wiki on your disk, that an LLM gardens for you between conversations.
 
 MindBase implements Andrej Karpathy's [LLM-Wiki pattern](https://x.com/karpathy/status/1911080091498963196) as a product. You feed it sources (papers, articles, thoughts). The LLM reads, cross-references, flags contradictions, and writes structured wiki pages. Later, when you ask a question, the wiki already has the synthesized answer — no vector search re-derivation at query time.
 
@@ -23,7 +23,7 @@ MindBase implements Andrej Karpathy's [LLM-Wiki pattern](https://x.com/karpathy/
   <img alt="The core flow in Claude Code: /mb:contribute with an arXiv link — download, archive, discuss takeaways, approve, commit" src="docs/assets/terminal-contribute.png" width="880">
 </p>
 
-(The web UI further down is an optional companion for browsing what the LLM wrote — operations run in your editor.)
+(Prefer a GUI? Since 0.3 the web UI runs the same operations standalone — write notes, approve AI updates, run health checks — no editor or API key required.)
 
 **Status:** Early access, actively developed. The v2 data model and the full core loop (ingest → build → ask → lint) are stable and what you install today. A few legacy corners of the optional web UI are still being polished.
 

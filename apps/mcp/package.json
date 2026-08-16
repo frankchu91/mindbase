@@ -55,7 +55,13 @@
     "windsurf",
     "ai",
     "wiki",
-    "karpathy"
+    "karpathy",
+    "llm-wiki",
+    "second-brain",
+    "personal-knowledge-base",
+    "ollama",
+    "local-llm",
+    "note-taking"
   ],
   "repository": {
     "type": "git",
