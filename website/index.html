@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MindBase — Karpathy's LLM Wiki, Open Source</title>
+<meta name="description" content="An open-source implementation of Karpathy's LLM Wiki idea: an AI that builds and maintains a markdown wiki from your notes and sources. Approval-gated updates, contradiction linting, runs on free local models via Ollama — no API key. A local-first, open-source NotebookLM alternative.">
+<link rel="canonical" href="https://frankchu91.github.io/mindbase-llm-wiki/">
+<meta property="og:title" content="MindBase — Karpathy's LLM Wiki, Open Source">
+<meta property="og:description" content="An AI maintains a persistent markdown wiki from your notes. You approve every change. Runs free on local models. Try it: npx mindbase-app">
+<meta property="og:image" content="https://raw.githubusercontent.com/frankchu91/mindbase-llm-wiki/main/docs/assets/social-preview.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "MindBase",
+  "description": "An open-source implementation of Karpathy's LLM Wiki idea: an AI that builds and maintains a markdown wiki from your notes and sources.",
+  "applicationCategory": "ProductivityApplication",
+  "operatingSystem": "macOS, Windows, Linux",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "license": "https://opensource.org/licenses/MIT",
+  "url": "https://github.com/frankchu91/mindbase-llm-wiki"
+}
+</script>
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #ffffff; --ink: #1c1c1e; --mid: #5f5f66;
+    --faint: #9a9aa1; --line: #e5e5e2; --accent: #3b76f6; --accent-ink: #2757c8;
+    --code-bg: #14141a; --code-ink: #e8e8ee;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #131316; --panel: #1c1c21; --ink: #f0f0f2; --mid: #a8a8b0;
+      --faint: #6d6d75; --line: #2c2c31; --accent: #6a95f8; --accent-ink: #8fb0fa;
+      --code-bg: #0c0c10; --code-ink: #dcdce4;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 0 24px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  nav { display: flex; align-items: center; gap: 16px; padding: 20px 0; }
+  nav .logo { font-weight: 800; font-size: 18px; letter-spacing: -0.02em; color: var(--ink); }
+  nav .spacer { flex: 1; }
+  nav a.gh { color: var(--mid); font-size: 14px; }
+
+  header.hero { padding: 56px 0 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+  @media (max-width: 880px) { header.hero { grid-template-columns: 1fr; } }
+  .hero h1 { font-size: clamp(32px, 4.5vw, 46px); line-height: 1.12; letter-spacing: -0.03em; text-wrap: balance; }
+  .hero h1 em { color: var(--accent); font-style: normal; }
+  .hero p.sub { margin-top: 18px; font-size: 17px; color: var(--mid); max-width: 46ch; }
+  .cta-row { margin-top: 28px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .npx {
+    display: inline-flex; align-items: center; gap: 12px;
+    background: var(--code-bg); color: var(--code-ink);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 15px;
+    padding: 12px 18px; border-radius: 10px; cursor: pointer; border: none;
+  }
+  .npx .dollar { color: #57c26b; }
+  .npx .hint { font-size: 11px; color: #7a7a85; font-family: inherit; }
+  .btn-gh {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 18px; border: 1px solid var(--line); border-radius: 10px;
+    color: var(--ink); font-weight: 600; font-size: 14px; background: var(--panel);
+  }
+  .btn-gh:hover { text-decoration: none; border-color: var(--accent); }
+  .hero video, .card video {
+    width: 100%; border-radius: 12px; border: 1px solid var(--line);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.10); display: block;
+  }
+
+  section { padding: 48px 0; border-top: 1px solid var(--line); }
+  section h2 { font-size: 26px; letter-spacing: -0.02em; margin-bottom: 8px; text-wrap: balance; }
+  section p.lead { color: var(--mid); max-width: 62ch; margin-bottom: 28px; }
+
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  @media (max-width: 720px) { .steps { grid-template-columns: 1fr; } }
+  .step { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  .step .k { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--accent); font-weight: 700; }
+  .step h3 { font-size: 16px; margin: 6px 0 6px; }
+  .step p { font-size: 14px; color: var(--mid); }
+
+  .diff { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 8px; }
+  @media (max-width: 880px) { .diff { grid-template-columns: 1fr; } }
+  .card h3 { font-size: 18px; margin: 14px 0 6px; }
+  .card p { font-size: 14.5px; color: var(--mid); max-width: 52ch; }
+
+  .local { display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; align-items: center; }
+  @media (max-width: 880px) { .local { grid-template-columns: 1fr; } }
+  .local ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .local li { padding-left: 26px; position: relative; font-size: 15px; }
+  .local li::before { content: "✓"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+  .models { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; font-size: 14px; }
+  .models table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  .models td { padding: 7px 4px; border-top: 1px solid var(--line); color: var(--mid); }
+  .models tr:first-child td { border-top: none; }
+  .models td:first-child { font-family: ui-monospace, Menlo, monospace; color: var(--ink); font-size: 13px; }
+
+  .installs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  @media (max-width: 880px) { .installs { grid-template-columns: 1fr; } }
+  .inst { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  .inst h3 { font-size: 15px; margin-bottom: 10px; }
+  .inst pre {
+    background: var(--code-bg); color: var(--code-ink); border-radius: 8px;
+    padding: 12px 14px; font-size: 12.5px; overflow-x: auto;
+    font-family: ui-monospace, Menlo, monospace; line-height: 1.5;
+  }
+  .inst p { font-size: 13px; color: var(--mid); margin-top: 10px; }
+
+  footer { border-top: 1px solid var(--line); padding: 36px 0 56px; color: var(--mid); font-size: 14px; }
+  footer .cols { display: flex; gap: 40px; flex-wrap: wrap; }
+  footer h4 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--faint); margin-bottom: 8px; }
+  footer ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <span class="logo">MindBase</span>
+    <span class="spacer"></span>
+    <a class="gh" href="https://github.com/frankchu91/mindbase-llm-wiki">GitHub ↗</a>
+  </nav>
+
+  <header class="hero">
+    <div>
+      <h1>Karpathy's LLM Wiki, <em>as a product</em>.</h1>
+      <p class="sub">Feed it notes, papers, and links. An AI builds and maintains a real markdown wiki on your disk — and asks for your approval before every change. Not RAG: knowledge that compounds.</p>
+      <div class="cta-row">
+        <button class="npx" onclick="navigator.clipboard.writeText('npx mindbase-app').then(()=>{this.querySelector('.hint').textContent='copied!'})">
+          <span><span class="dollar">$</span> npx mindbase-app</span>
+          <span class="hint">click to copy</span>
+        </button>
+        <a class="btn-gh" href="https://github.com/frankchu91/mindbase-llm-wiki">
+          ★ Star on GitHub
+        </a>
+      </div>
+    </div>
+    <video src="assets/contribute.mp4" autoplay loop muted playsinline
+      aria-label="Demo: ingesting a reading note into the LLM wiki — the AI shows takeaways and a checkbox plan of wiki updates, and writes only after approval"></video>
+  </header>
+
+  <section id="how">
+    <h2>How the LLM Wiki works</h2>
+    <p class="lead">Three layers on disk, exactly as <a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f">Karpathy's LLM Wiki gist</a> describes — your raw notes stay yours; the AI owns only the wiki layer.</p>
+    <div class="steps">
+      <div class="step"><span class="k">01 · sources/</span><h3>You write, append-only</h3><p>Quick captures, full notes, PDFs, URLs. The AI reads this layer but never rewrites it.</p></div>
+      <div class="step"><span class="k">02 · wiki</span><h3>The AI gardens</h3><p>It digests your sources into context.md and research pages — cross-referenced, deduplicated, contradiction-flagged.</p></div>
+      <div class="step"><span class="k">03 · ask</span><h3>Answers are pre-written</h3><p>Questions hit the maintained wiki, not raw chunks. Good answers get filed back as new pages. Knowledge compounds.</p></div>
+    </div>
+  </section>
+
+  <section id="different">
+    <h2>What no other note tool does</h2>
+    <div class="diff">
+      <div class="card">
+        <video src="assets/note-chip.mp4" autoplay loop muted playsinline
+          aria-label="Demo: writing a note, then the wiki-status chip flips from 'Add to wiki' to 'In wiki' after the AI digests it"></video>
+        <h3>You can watch the wiki absorb your notes</h3>
+        <p>Every note carries a status chip — <strong>✨ Add to wiki</strong> until digested, <strong>✓ In wiki</strong> after. The AI proposes takeaways and a checkbox plan first; nothing is written without your approval.</p>
+      </div>
+      <div class="card">
+        <video src="assets/lint.mp4" autoplay loop muted playsinline
+          aria-label="Demo: the wiki health check surfacing contradiction and gap cards with quoted evidence from conflicting pages"></video>
+        <h3>It audits its own knowledge</h3>
+        <p>One click and the AI re-reads your whole wiki: contradictions with the exact conflicting sentences quoted, stale claims, orphan pages, open gaps — as cards you can act on. Notion and NotebookLM cannot do this.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="local">
+    <div class="local">
+      <div>
+        <h2>Free. Local. Yours.</h2>
+        <p class="lead" style="margin-bottom:18px">No subscription, no API key, no data leaving your machine.</p>
+        <ul>
+          <li>Setup detects your hardware and installs the best local model that fits</li>
+          <li>Everything is plain markdown in <code>~/mindbase-data</code> — grep it, git it, leave anytime</li>
+          <li>Works with Claude Code, Cursor, Windsurf, and any MCP client — or standalone in the browser</li>
+          <li>MIT licensed, open source</li>
+        </ul>
+      </div>
+      <div class="models" aria-label="Local model recommendations by RAM">
+        <table>
+          <tr><td>llama3.2:3b</td><td>8 GB RAM</td><td>capture &amp; search</td></tr>
+          <tr><td>qwen3:14b</td><td>24 GB+</td><td>interactive default</td></tr>
+          <tr><td>muse-glimmer:30b</td><td>32 GB+ Apple Silicon</td><td>deep synthesis &amp; lint</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <h2>Install</h2>
+    <div class="installs">
+      <div class="inst">
+        <h3>Just try it (browser UI)</h3>
+        <pre>npx mindbase-app</pre>
+        <p>Starts the local server, opens the web app, walks you through picking a free local model. Node 20+.</p>
+      </div>
+      <div class="inst">
+        <h3>Claude Code (plugin)</h3>
+        <pre>/plugin marketplace add frankchu91/mindbase-llm-wiki
+/plugin install mb@mindbase</pre>
+        <p>Slash commands (/mb:contribute, /mb:build, /mb:lint…), sub-agents, auto context injection.</p>
+      </div>
+      <div class="inst">
+        <h3>Cursor / any MCP client</h3>
+        <pre>{ "mcpServers": { "mindbase": {
+  "command": "npx",
+  "args": ["-y", "mindbase-mcp"]
+} } }</pre>
+        <p>49 tools: ingest, search, synthesize, health-check your wiki from any MCP-compatible editor.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="cols">
+      <div>
+        <h4>Project</h4>
+        <ul>
+          <li><a href="https://github.com/frankchu91/mindbase-llm-wiki">GitHub</a></li>
+          <li><a href="https://github.com/frankchu91/mindbase-llm-wiki/blob/main/CHANGELOG.md">Changelog</a></li>
+          <li><a href="https://www.npmjs.com/package/mindbase-mcp">npm: mindbase-mcp</a></li>
+          <li><a href="https://www.npmjs.com/package/mindbase-app">npm: mindbase-app</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>The idea</h4>
+        <ul>
+          <li><a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f">Karpathy's LLM Wiki gist</a></li>
+          <li><a href="https://dev.to/frankchu/i-built-an-implementation-of-karpathys-llm-wiki-idea-mcp-server-open-source-3l3b">Why I built this</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>License</h4>
+        <ul><li>MIT · built by <a href="https://github.com/frankchu91">Haobing Chu</a></li></ul>
+      </div>
+    </div>
+  </footer>
+</div>
+</body>
+</html>
