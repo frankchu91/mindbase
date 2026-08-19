@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.3 (2026-08-19)
+
+### Added
+
+- **`npx mindbase-app`** — the web UI's first distribution channel: one
+  command starts the bundled server + web app and opens your browser
+  (previously clone + pnpm only). 2.8MB tarball; `--port`, `--no-open`.
+- **Website** — https://frankchu91.github.io/mindbase-llm-wiki/ with live
+  demo clips, deployed from `website/` via GitHub Pages.
+- Muse Glimmer recommended on 32GB+ Apple Silicon; quick model switcher
+  on the composer badge; thinking-model reasoning streamed live in chat.
+
 ## 0.4.0 (2026-08-07)
 
 ### Added — write full notes in the UI

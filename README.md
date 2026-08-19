@@ -5,6 +5,7 @@
 [![CI](https://github.com/frankchu91/mindbase/actions/workflows/ci.yml/badge.svg)](https://github.com/frankchu91/mindbase/actions)
 [![Discussions](https://img.shields.io/badge/discussions-join-blue?logo=github)](https://github.com/frankchu91/mindbase/discussions)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Website](https://img.shields.io/badge/website-frankchu91.github.io%2Fmindbase--llm--wiki-blue)](https://frankchu91.github.io/mindbase-llm-wiki/)
 
 > **An open-source implementation of Andrej Karpathy's LLM Wiki idea: an AI that builds and maintains a wiki from your sources.** Not RAG-in-a-vector-DB. A real markdown wiki on your disk, that an LLM gardens for you between conversations.
 
@@ -169,7 +170,19 @@ MindBase runs **entirely on your machine**. No cloud upload, no signup, no telem
 
 ## Install — choose your AI editor
 
-MindBase ships as an **MCP (Model Context Protocol) server** — published on npm as [`mindbase-mcp`](https://www.npmjs.com/package/mindbase-mcp). Every MCP-compatible AI editor can use its tools with a one-line config; no clone, no build. Claude Code gets an extra layer of polish (slash commands, sub-agents) via the plugin.
+**Fastest path — no editor needed:**
+
+```bash
+npx mindbase-app
+```
+
+Starts the local server, opens the web app, and walks you through picking a free local model. Node 20+. That's the whole install.
+
+For AI-editor workflows, MindBase also ships as an **MCP (Model Context Protocol) server** — published on npm as [`mindbase-mcp`](https://www.npmjs.com/package/mindbase-mcp). Every MCP-compatible AI editor can use its tools with a one-line config; no clone, no build. Claude Code gets an extra layer of polish (slash commands, sub-agents) via the plugin.
+
+<p align="center">
+  <img alt="Demo: /contribute in the MindBase web UI — the AI shows takeaways and a checkbox plan, and writes to the LLM wiki only after approval" src="docs/assets/contribute.gif" width="880">
+</p>
 
 ---
 
