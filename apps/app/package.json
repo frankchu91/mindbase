@@ -1,0 +1,53 @@
+{
+  "name": "mindbase-app",
+  "version": "0.4.0",
+  "description": "One-command launcher for MindBase \u2014 Karpathy's LLM Wiki as a product. Starts the local server + web UI: npx mindbase-app",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "mindbase-app": "bin/mindbase-app.js"
+  },
+  "files": [
+    "bin/",
+    "dist/"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "smoke": "node smoke.mjs"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "sharp": "^0.34.5",
+    "@xenova/transformers": "^2.17.2",
+    "argon2": "^0.44.0",
+    "tesseract.js": "^7.0.0",
+    "jsdom": "^29.1.1",
+    "node-cron": "^4.2.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "mindbase",
+    "llm-wiki",
+    "karpathy",
+    "knowledge-base",
+    "second-brain",
+    "wiki",
+    "ollama",
+    "local-llm",
+    "ai"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/frankchu91/mindbase.git",
+    "directory": "apps/app"
+  },
+  "homepage": "https://github.com/frankchu91/mindbase#readme"
+}

@@ -211,7 +211,9 @@ async function main() {
   analysisScheduler.start();
 
   // Serve built web UI
-  const webDist = path.resolve(import.meta.dirname, '../../web/dist');
+  // MINDBASE_WEB_DIST lets the packaged npx launcher (mindbase-app) point at
+  // its bundled copy of the web build; dev/source layout is the fallback.
+  const webDist = process.env['MINDBASE_WEB_DIST'] ?? path.resolve(import.meta.dirname, '../../web/dist');
   app.use(express.static(webDist));
   app.get('*', (_req, res, next) => {
     if (_req.path.startsWith('/api')) return next();
