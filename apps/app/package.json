@@ -1,6 +1,6 @@
 {
   "name": "mindbase-app",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "One-command launcher for MindBase \u2014 Karpathy's LLM Wiki as a product. Starts the local server + web UI: npx mindbase-app",
   "license": "MIT",
   "type": "module",
