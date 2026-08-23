@@ -25,13 +25,22 @@ describe('createProject', () => {
     expect(m2.id).toBe('foo-2');
   });
 
-  it('scaffolds wiki/{concepts,notes,sources} + raw dirs', async () => {
+  it('scaffolds the v2 layout — README.md marker, context, index, source dirs', async () => {
     const store = new MemoryStore();
     const m = await createProject(store, { name: 'P' });
-    expect(await store.exists(`projects/${m.id}/wiki/concepts/.gitkeep`)).toBe(true);
-    expect(await store.exists(`projects/${m.id}/wiki/notes/.gitkeep`)).toBe(true);
-    expect(await store.exists(`projects/${m.id}/wiki/sources/.gitkeep`)).toBe(true);
-    expect(await store.exists(`projects/${m.id}/raw/.gitkeep`)).toBe(true);
+    // README.md is the v2 layout marker: without it detectLayoutVersion
+    // reports v1 and every v2 route 409s on the fresh project.
+    expect(await store.exists(`projects/${m.id}/README.md`)).toBe(true);
+    expect(await store.exists(`projects/${m.id}/context.md`)).toBe(true);
+    expect(await store.exists(`projects/${m.id}/index.yaml`)).toBe(true);
+    expect(await store.exists(`projects/${m.id}/sources/contributors/.gitkeep`)).toBe(true);
+    expect(await store.exists(`projects/${m.id}/sources/research/.gitkeep`)).toBe(true);
+    expect(await store.exists(`projects/${m.id}/sources/raw/.gitkeep`)).toBe(true);
+    // No v1 leftovers
+    expect(await store.exists(`projects/${m.id}/wiki/concepts/.gitkeep`)).toBe(false);
+    expect(await store.exists(`projects/${m.id}/raw/.gitkeep`)).toBe(false);
+    const readme = await store.readText(`projects/${m.id}/README.md`);
+    expect(readme).toContain('# P — Operations Manual');
   });
 
   it('respects template option', async () => {
@@ -49,7 +58,7 @@ describe('createProject', () => {
       name: 'Market Research',
       template: 'market-research',
     });
-    const schemaPath = `projects/${meta.id}/wiki/schema.md`;
+    const schemaPath = `projects/${meta.id}/schema/schema.md`;
     expect(await store.exists(schemaPath)).toBe(true);
     const content = await store.readText(schemaPath);
     expect(content).toContain('# Wiki Schema — Market Research');
@@ -119,7 +128,7 @@ describe('deleteProject', () => {
     await deleteProject(store, m.id);
     expect(await getProject(store, m.id)).toBeNull();
     // Data dir untouched
-    expect(await store.exists(`projects/${m.id}/wiki/concepts/.gitkeep`)).toBe(true);
+    expect(await store.exists(`projects/${m.id}/README.md`)).toBe(true);
   });
 
   it('throws on invalid project id', async () => {
