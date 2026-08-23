@@ -2,59 +2,25 @@
 
 [![npm](https://img.shields.io/npm/v/mindbase-mcp?label=mindbase-mcp)](https://www.npmjs.com/package/mindbase-mcp)
 [![npm downloads](https://img.shields.io/npm/dw/mindbase-mcp)](https://www.npmjs.com/package/mindbase-mcp)
-[![CI](https://github.com/frankchu91/mindbase/actions/workflows/ci.yml/badge.svg)](https://github.com/frankchu91/mindbase/actions)
-[![Discussions](https://img.shields.io/badge/discussions-join-blue?logo=github)](https://github.com/frankchu91/mindbase/discussions)
+[![CI](https://github.com/frankchu91/mindbase-llm-wiki/actions/workflows/ci.yml/badge.svg)](https://github.com/frankchu91/mindbase-llm-wiki/actions)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Website](https://img.shields.io/badge/website-frankchu91.github.io%2Fmindbase--llm--wiki-blue)](https://frankchu91.github.io/mindbase-llm-wiki/)
+[![Website](https://img.shields.io/badge/website-live%20demos-blue)](https://frankchu91.github.io/mindbase-llm-wiki/)
 
 > **An open-source implementation of Andrej Karpathy's LLM Wiki idea: an AI that builds and maintains a wiki from your sources.** Not RAG-in-a-vector-DB. A real markdown wiki on your disk, that an LLM gardens for you between conversations.
 
-MindBase implements Andrej Karpathy's [LLM-Wiki pattern](https://x.com/karpathy/status/1911080091498963196) as a product. You feed it sources (papers, articles, thoughts). The LLM reads, cross-references, flags contradictions, and writes structured wiki pages. Later, when you ask a question, the wiki already has the synthesized answer — no vector search re-derivation at query time.
+```bash
+npx mindbase-app
+```
+
+One command: starts the local server, opens the web app, and walks you through picking a **free local model** that fits your RAM. No API key, nothing leaves your machine. (Node 20+)
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-dark.svg">
-    <img alt="MindBase: you feed sources, the LLM gardens them into a wiki that compounds — plain markdown on your disk" src="docs/assets/hero-light.svg" width="920">
-  </picture>
+  <img alt="Demo: /contribute in the MindBase web UI — the AI shows takeaways and a checkbox plan, and writes to the LLM wiki only after approval" src="docs/assets/contribute.gif" width="880">
 </p>
 
-**Your editor is the primary interface.** Throw an arXiv link at it and the ingest flow runs right where you work — the model archives the original, walks you through the takeaways, and waits for your go-ahead before touching the wiki:
+MindBase implements Andrej Karpathy's [LLM-Wiki pattern](https://x.com/karpathy/status/1911080091498963196): you feed it sources (papers, articles, thoughts); the LLM reads, cross-references, flags contradictions, and writes structured wiki pages. Later, when you ask a question, the wiki already has the synthesized answer — no vector-search re-derivation at query time.
 
-<p align="center">
-  <img alt="The core flow in Claude Code: /mb:contribute with an arXiv link — download, archive, discuss takeaways, approve, commit" src="docs/assets/terminal-contribute.png" width="880">
-</p>
-
-(Prefer a GUI? Since 0.3 the web UI runs the same operations standalone — write notes, approve AI updates, run health checks — no editor or API key required.)
-
-**Status:** Early access, actively developed. The v2 data model and the full core loop (ingest → build → ask → lint) are stable and what you install today. A few legacy corners of the optional web UI are still being polished.
-
----
-
-## Table of contents
-
-- [Why MindBase](#why-mindbase)
-- [What's new](#whats-new)
-- [How it works (30 seconds)](#how-it-works-30-seconds)
-- [What makes it different](#what-makes-it-different)
-- [Prerequisites](#prerequisites)
-- [Install — choose your AI editor](#install--choose-your-ai-editor)
-  - [Claude Code (flagship experience)](#claude-code-flagship-experience)
-  - [Cursor](#cursor)
-  - [Windsurf](#windsurf)
-  - [Cline (VSCode)](#cline-vscode)
-  - [Continue.dev](#continuedev)
-  - [Any other MCP-compatible client](#any-other-mcp-compatible-client)
-- [First project (2 minutes)](#first-project-2-minutes)
-- [Core workflows](#core-workflows)
-- [Working with multiple projects](#working-with-multiple-projects)
-- [Web UI (optional companion)](#web-ui-optional-companion)
-- [Feature matrix by editor](#feature-matrix-by-editor)
-- [Where your data lives](#where-your-data-lives)
-- [Architecture at a glance](#architecture-at-a-glance)
-- [Troubleshooting](#troubleshooting)
-- [Roadmap](#roadmap)
-- [Beta feedback](#beta-feedback)
-- [License](#license)
+**Status:** Early access, actively developed. What's new: [CHANGELOG](CHANGELOG.md) · [Releases](https://github.com/frankchu91/mindbase-llm-wiki/releases)
 
 ---
 
@@ -69,794 +35,192 @@ You read a lot. Papers, articles, tweets, docs. You want to remember them, conne
 
 Think of it as **a personal Wikipedia that an AI intern writes for you**, kept up to date, cross-referenced, and honest about what it doesn't know.
 
----
-
-## What's new
-
-**0.4.0 — Write full notes in the UI** *(2026-08-07)*
-`Cmd+N` opens a real WYSIWYG editor (headings, links, `[[wikilinks]]`,
-outline, backlinks). Notes live in *your* layer — the AI reads them but
-never rewrites them. A **wiki-status chip** on every note shows whether
-the wiki has absorbed it yet: **✨ Add to wiki** → **✓ In wiki · 2 pages**.
-
-**0.3.0 — The Web UI runs the core operations** *(2026-08-06)*
-`/contribute`, `/build`, `/lint`, `/research` now work in the browser,
-orchestrated server-side with whatever LLM you configure. Contribute
-shows takeaways + a checkbox plan and only writes what you approve. The
-Health view surfaces contradictions, orphans, and gaps as cards. Also
-fixed: chat retrieval now actually indexes your wiki (it was silently
-empty on new-layout projects).
-
-**0.2.0 — Free local models, no API key** *(2026-08-06)*
-The setup wizard detects your hardware, recommends the best Ollama model
-that fits your RAM, installs it with a progress bar, and verifies it with
-a real generation. MindBase now works end-to-end with zero subscriptions
-and zero data leaving your machine.
-
-**0.1.x — First public release** *(2026-07)*
-MCP server on npm (`mindbase-mcp`), Claude Code plugin with slash
-commands + sub-agents, works in Cursor/Windsurf/Cline/Continue, local
-PDF/URL ingestion, hybrid search, knowledge graph, web viewer.
-
-Full details in [CHANGELOG.md](CHANGELOG.md).
-
----
-
 ## How it works (30 seconds)
 
 Three physical layers on disk (Karpathy's model):
 
-```
-Layer 1 — sources/          You add these. Append-only. LLM reads, never rewrites.
-   ├─ contributors/          Your thoughts, dated per-user (like a lab notebook)
-   ├─ research/              Wiki pages the LLM writes (concepts, entities, syntheses)
-   └─ raw/                   PDFs, URL captures, pastes — original binaries
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-dark.svg">
+    <img alt="MindBase: you feed sources, the LLM gardens them into a wiki that compounds — plain markdown on your disk" src="docs/assets/hero-light.svg" width="920">
+  </picture>
+</p>
 
-Layer 2 — README.md          The rules of your wiki. You edit. LLM reads at every op.
-          context.md         The synthesized current truth. LLM writes. You read.
-          index.yaml         Auto-generated file catalog. LLM maintains.
+| Layer | Who owns it | What lives there |
+|---|---|---|
+| `sources/` | **You** — append-only, the AI never rewrites it | Quick captures, full notes, PDFs, URLs |
+| `context.md` + `sources/research/` | **The AI** — every change human-approved | The maintained wiki: synthesis, concept pages, `[[wikilinks]]` |
+| `state/` · `logs/` · `artifacts/` | Derived — always rebuildable | Search index, snapshots, lint findings, op history |
 
-Layer 3 — logs/              Chronological log of every operation. LLM appends.
-          artifacts/         Generated outputs: daily briefs, exports, lint reports.
-```
-
-Three operations the AI can run:
-
-| Operation | What happens |
-|---|---|
-| **Contribute** | You feed a thought / PDF / URL. LLM reads, discusses key takeaways with you, updates 5-15 relevant wiki pages, appends log. |
-| **Ask** | You ask a question. LLM reads your `context.md` first (already-synthesized truth), then drills into cited source pages. Cited answers with `[[wikilink]]` provenance. |
-| **Lint** | LLM audits the whole wiki for contradictions, stale claims, orphan pages, missing cross-references, gaps that need investigation. |
-
-They form a loop — good answers and lint findings flow back in as new contributions, so the wiki compounds:
-
-```mermaid
-flowchart LR
-    C["contribute<br/><small>thought · PDF · URL</small>"] --> S[("sources/<br/><small>append-only</small>")]
-    S --> B["build<br/><small>LLM synthesizes</small>"]
-    B --> W[("context.md<br/>research/*.md")]
-    W --> Q["ask<br/><small>cited answers</small>"]
-    W --> L["lint<br/><small>contradictions · orphans · gaps</small>"]
-    Q -. "good answers filed back" .-> C
-    L -. "follow-up notes" .-> C
-```
-
-That's the entire product. Everything else is UX.
-
----
+Three operations run the loop: **ingest** (AI reads a source, discusses takeaways, you approve the wiki updates), **build** (regenerate `context.md` from everything unbuilt), **lint** (the AI audits its own wiki for contradictions, stale claims, and orphans).
 
 ## What makes it different
 
-**vs. Notion:** You own the data (markdown files, not a proprietary DB). The AI is a **maintainer**, not a bolt-on generator. `context.md` evolves; Notion pages don't.
+- **The AI asks before writing.** Every ingest shows takeaways + a checkbox plan; only what you approve gets written. No black-box edits to your knowledge.
+- **You can watch the wiki absorb your notes.** Every note carries a status chip — ✨ *Add to wiki* until digested, ✓ *In wiki* after.
+- **It audits its own knowledge.** One command re-reads the whole wiki and reports contradictions with the exact conflicting sentences quoted. Notion and NotebookLM structurally cannot do this.
+- **Free and local by default.** Hardware-detect wizard installs the best Ollama model for your RAM. Cloud keys optional.
+- **Plain markdown on disk.** Grep it, git it, open it in Obsidian, leave anytime.
 
-**vs. Obsidian:** You get the same local-first markdown vault, but with an AI that **actively writes** the wiki — you don't have to hand-craft every note. Comes with `[[wikilinks]]` cross-referencing done for you.
+## Install
 
-**vs. NotebookLM / Perplexity:** Knowledge **compounds**. Ask "what's my view on RAG?" and the answer already exists in `context.md`. NotebookLM re-derives it from raw sources every time — nothing accumulates.
+**Browser (fastest):** `npx mindbase-app` — shown above. Everything runs locally at `localhost:4321`.
 
-**vs. any RAG tool:** RAG is stateless retrieval. MindBase is **stateful synthesis**. The wiki gets richer with every ingest. Answers get faster and more consistent over time.
-
----
-
-## Prerequisites
-
-- **Node.js 20+** (that's it for Cursor / Windsurf / Cline / Continue — the MCP server installs itself via `npx`)
-- One of: Claude Code, Cursor, Windsurf, Cline, Continue.dev, or another MCP-compatible AI editor
-- **pnpm 10+** only if you install the Claude Code plugin or the web UI from source
-- (Optional) A modern browser, if you want the web UI
-
-MindBase runs **entirely on your machine**. No cloud upload, no signup, no telemetry.
-
----
-
-## Install — choose your AI editor
-
-**Fastest path — no editor needed:**
-
-```bash
-npx mindbase-app
-```
-
-Starts the local server, opens the web app, and walks you through picking a free local model. Node 20+. That's the whole install.
-
-For AI-editor workflows, MindBase also ships as an **MCP (Model Context Protocol) server** — published on npm as [`mindbase-mcp`](https://www.npmjs.com/package/mindbase-mcp). Every MCP-compatible AI editor can use its tools with a one-line config; no clone, no build. Claude Code gets an extra layer of polish (slash commands, sub-agents) via the plugin.
-
-<p align="center">
-  <img alt="Demo: /contribute in the MindBase web UI — the AI shows takeaways and a checkbox plan, and writes to the LLM wiki only after approval" src="docs/assets/contribute.gif" width="880">
-</p>
-
----
-
-### Claude Code (flagship experience)
-
-Get the full Karpathy 8-step ingest with sub-agents, slash commands, auto-context, and per-agent tool boundaries.
-
-**Install the plugin** — two commands inside Claude Code, no clone, no build:
+**Claude Code (flagship):** the full Karpathy 8-step ingest with sub-agents, slash commands, and per-agent tool boundaries:
 
 ```
-/plugin marketplace add frankchu91/mindbase
+/plugin marketplace add frankchu91/mindbase-llm-wiki
 /plugin install mb@mindbase
 ```
 
-Restart Claude Code when prompted. (The plugin launches its MCP server via `npx -y mindbase-mcp`, so npm delivers the server automatically.)
+Restart when prompted, then type `/` — you should see `/mb:contribute`, `/mb:build`, `/mb:ask`, `/mb:lint` and 8 more. You get 5 sub-agents with strict tool allowlists (the builder has no file-write tool at all — only an atomic-write MCP call), plus a SessionStart hook that auto-injects your project context.
+
+<p align="center">
+  <img alt="The core flow in Claude Code: /mb:contribute with an arXiv link — download, archive, discuss takeaways, approve, commit" src="docs/assets/terminal-contribute.png" width="880">
+</p>
 
 <details>
-<summary>Developing the plugin from a clone?</summary>
+<summary><b>Cursor</b></summary>
 
-```bash
-git clone https://github.com/frankchu91/mindbase.git
-cd mindbase && pnpm install
-claude --plugin-dir apps/plugin
+Add to `~/.cursor/mcp.json`:
+
+```json
+{ "mcpServers": { "mindbase": { "command": "npx", "args": ["-y", "mindbase-mcp"] } } }
 ```
+
+Restart Cursor — the tool picker should list `mindbase_contribute` and 48 others. Recommended: add a conventions block to `~/.cursor/rules.md` so the LLM reliably routes "add to mindbase X" to the tools — copy it from the [guide](docs/guide.md#the-llm-in-cursorwindsurf-ignores-my-add-to-mindbase-request).
 
 </details>
 
-**Verify:** Open Claude Code, type `/`. You should see `/mb:contribute`, `/mb:ask`, `/mb:build`, `/mb:status`, and 8 others. Run `/mcp` — you should see `mb` connected with 49 tools.
+<details>
+<summary><b>Windsurf</b></summary>
 
-**What you get:**
-- 12 slash commands (`/mb:*`)
-- 5 sub-agents with security boundaries (`contributor`, `builder`, `curator`, `researcher`, `migrator`) — each has a strict tool allowlist
-- SessionStart hook — every new Claude Code session auto-injects your project's README + context + recent log entries
-- The full Karpathy 8-step ingest: read → discuss takeaways → propose plan → wait for approval → execute
-
-Skip to [First project](#first-project-2-minutes).
-
----
-
-### Cursor
-
-Add to `~/.cursor/mcp.json` (create the file if missing):
+Cascade settings → MCP → add:
 
 ```json
-{
-  "mcpServers": {
-    "mindbase": {
-      "command": "npx",
-      "args": ["-y", "mindbase-mcp"]
-    }
-  }
-}
+{ "mcpServers": { "mindbase": { "command": "npx", "args": ["-y", "mindbase-mcp"] } } }
 ```
 
-Restart Cursor. Open Cursor Chat → the tool picker should list `mindbase_contribute`, `mindbase_ask_wiki`, and 47 others.
+Same rules-file approach as Cursor works for Cascade.
 
-**Optional but recommended:** teach Cursor's LLM about MindBase conventions by adding to `~/.cursor/rules.md` (or per-project `.cursorrules`):
+</details>
 
-```
-# MindBase conventions
+<details>
+<summary><b>Cline (VSCode)</b></summary>
 
-When the user mentions "mindbase", "mb", "my wiki", "记一下", or "记忆",
-the following MCP tools are available: mindbase_contribute, mindbase_ask_wiki,
-mindbase_status, mindbase_load_project, and more.
-
-Rules:
-1. When user says "add to mindbase X" or "记一下 X", ALWAYS call mindbase_contribute
-   with text=X. Never just acknowledge without calling the tool.
-2. When user says "ask mindbase X" or "问问我的 wiki", call mindbase_ask_wiki
-   with query=X.
-3. When ingesting a PDF/URL, follow the 8-step Karpathy loop:
-   read → discuss 3 key takeaways with user → propose plan → wait for approval
-   → then call mindbase_contribute with the summary.
-4. Default project comes from config.json currentProjectId. If the user says
-   "for project X" or "在 X 项目里", pass projectId=X to the tool call.
-```
-
-Skip to [First project](#first-project-2-minutes).
-
----
-
-### Windsurf
-
-Windsurf uses the same MCP config format. Open Cascade settings → MCP → add:
+Cline settings → **MCP Servers**:
 
 ```json
-{
-  "mcpServers": {
-    "mindbase": {
-      "command": "npx",
-      "args": ["-y", "mindbase-mcp"]
-    }
-  }
-}
+{ "mcpServers": { "mindbase": { "command": "npx", "args": ["-y", "mindbase-mcp"] } } }
 ```
 
-Restart Windsurf. Same rules-file approach as Cursor works — put a `MindBase conventions` block in your Cascade rules.
+Cline auto-detects; every tool call gets a confirmation dialog by default.
 
-Skip to [First project](#first-project-2-minutes).
+</details>
 
----
+<details>
+<summary><b>Continue.dev</b></summary>
 
-### Cline (VSCode)
-
-Open VSCode → Cline extension settings → **MCP Servers**. Add:
+`~/.continue/config.json`, under `experimental.modelContextProtocolServers`:
 
 ```json
-{
-  "mcpServers": {
-    "mindbase": {
-      "command": "npx",
-      "args": ["-y", "mindbase-mcp"]
-    }
-  }
-}
+{ "experimental": { "modelContextProtocolServers": [ { "transport": { "type": "stdio", "command": "npx", "args": ["-y", "mindbase-mcp"] } } ] } }
 ```
 
-Cline auto-detects. Every tool call gets a confirmation dialog by default (transparency win). Skip to [First project](#first-project-2-minutes).
+MCP tools appear under `@` in chat.
 
----
+</details>
 
-### Continue.dev
+<details>
+<summary><b>Any other MCP client</b> (Zed, Aider, Goose, Claude Agent SDK…)</summary>
 
-Open `~/.continue/config.json`. Add under `experimental.modelContextProtocolServers`:
+Point it at `npx -y mindbase-mcp` as a stdio server. See your client's MCP docs for the config location.
 
-```json
-{
-  "experimental": {
-    "modelContextProtocolServers": [
-      {
-        "transport": {
-          "type": "stdio",
-          "command": "npx",
-          "args": ["-y", "mindbase-mcp"]
-        }
-      }
-    ]
-  }
-}
-```
+</details>
 
-Restart VSCode. In Continue chat, MCP tools appear under `@`. Skip to [First project](#first-project-2-minutes).
+**Next:** create your first project and learn the four daily workflows in the **[Guide →](docs/guide.md)**
 
----
+## The web UI
 
-### Any other MCP-compatible client
-
-If your editor supports MCP (Zed, Aider, Goose, ChatGPT Desktop's future MCP support, custom Claude Agent SDK apps), the pattern is identical: point it at
-
-```
-npx -y mindbase-mcp
-```
-
-as a stdio server. See your client's MCP docs for the exact config location.
-
----
-
-## First project (2 minutes)
-
-Once your editor has the MCP server connected, create your first project.
-
-### Claude Code
-
-```
-/mb:init my-research --mission "Study transformer attention mechanisms"
-```
-
-Claude will scaffold `~/mindbase-data/projects/my-research/` with `README.md`, `context.md`, `index.yaml`, and empty `sources/`, `logs/`, `artifacts/` directories, and set it as your current project.
-
-### Cursor / Windsurf / Cline / Continue
-
-Type in chat:
-
-```
-Create a new mindbase project called my-research about transformer 
-attention mechanisms.
-```
-
-The LLM will call `mindbase_init_project({ name: "my-research", mission: "..." })` and confirm.
-
-### Verify
-
-```
-/mb:status              # in Claude Code
-```
-
-Or ask any other IDE:
-
-```
-what's the status of my mindbase?
-```
-
-You should see:
-
-```
-MindBase — Project: my-research
-Location: ~/mindbase-data/projects/my-research
-
-README     28 lines
-context.md 8 lines  (last built: never)
-index.yaml 5 lines
-
-Contributors: 0 users, 0 entries
-Sources:      0 research, 0 raw
-Logs:         1 day
-Artifacts:    0 outputs
-```
-
-You're ready.
-
----
-
-## Core workflows
-
-The four things you'll do every day.
-
-### 1. Contribute a thought
-
-Add a short observation, a decision, or a hot take. Goes straight into today's contributor file, no ceremony.
-
-**Claude Code:**
-```
-/mb:contribute "Attention is basically a soft dictionary lookup — each query 
-retrieves a weighted average of values based on similarity to keys."
-```
-
-**Any other IDE:**
-```
-Add to my mindbase: Attention is basically a soft dictionary lookup — each 
-query retrieves a weighted average of values based on similarity to keys.
-```
-
-**Result:** appends to `~/mindbase-data/projects/my-research/sources/contributors/<you>/2026-07-11.md` and logs the operation.
-
-### 2. Ingest a substantive source (paper, article, PDF)
-
-For a real source, MindBase walks through Karpathy's 8-step ingest.
-
-**Claude Code (flagship — with sub-agent):**
-```
-/mb:contribute /Downloads/attention-is-all-you-need.pdf
-```
-
-The `contributor` sub-agent will:
-1. Read the PDF fully
-2. Come back to you with 3 key takeaways
-3. Propose which wiki pages to create/update
-4. Wait for your approval
-5. Execute — creating `sources/research/attention-mechanism.md`, updating `context.md`, appending log
-6. Confirm: `✓ Created 4, updated 3, logged.`
-
-**Any other IDE (lite mode — no sub-agent):**
-```
-Read this paper [/Downloads/paper.pdf] and ingest it into my mindbase. 
-Walk me through the 3 key takeaways before committing anything.
-```
-
-You get most of the value but the sub-agent's structured approval flow is a Claude Code exclusive. The LLM in Cursor/Windsurf/Cline will typically call `mindbase_contribute` directly — you can steer the ritual manually via your prompt.
-
-### 3. Ask your wiki
-
-Query with cited answers.
-
-**Claude Code:**
-```
-/mb:ask "how did I resolve the attention scaling factor question?"
-```
-
-**Any other IDE:**
-```
-Search my mindbase — how did I resolve the attention scaling factor question?
-```
-
-The LLM calls `mindbase_ask_wiki` (graph-aware retrieval: top hits + wikilink neighbors) then synthesizes a cited answer:
-
-```
-You resolved this on 2026-06-15 [context.md:42-51]. The 1/√d_k scaling 
-prevents dot products from growing too large in high dimensions, which 
-would push softmax into low-gradient regions [attention-mechanism.md:23-28].
-
-Sources:
-- [[context.md]]
-- [[attention-mechanism.md]]
-- [[sources/research/scaled-attention.md]]
-```
-
-### 4. Build (regenerate context.md)
-
-After a few contributions, regenerate the curated `context.md` so it reflects your current thinking.
-
-**Claude Code (flagship — with sub-agent):**
-```
-/mb:build
-```
-
-The `builder` sub-agent:
-1. Validates project structure
-2. Gathers all unbuilt sources since last build
-3. Synthesizes them into a fresh `context.md`
-4. Writes atomically (snapshots the old one first so you can rollback)
-5. Rebuilds the index
-
-**Any other IDE:**
-```
-Rebuild my mindbase context.md — synthesize all unbuilt sources.
-```
-
-The LLM will orchestrate the equivalent MCP tool calls. Slightly less structured than the sub-agent flow but functionally equivalent.
-
-### 5. Health check (lint)
-
-Ask MindBase to audit itself.
-
-**Claude Code:**
-```
-/mb:lint
-```
-
-**Any other IDE:**
-```
-Run a health check on my mindbase — find contradictions, orphans, gaps.
-```
-
-Output looks like:
-
-```
-Found:
-- 1 contradiction: attention-mechanism.md:15 says "scaling by √d" but 
-  context.md:32 says "scaling by 1/√d". Same claim, different notation.
-- 2 orphan pages: [[legacy-transformer-note]] and [[old-benchmark]] 
-  have no inbound wikilinks.
-- 1 gap: "positional encoding" is mentioned 4 times across the wiki 
-  but has no dedicated page.
-- 3 suggested cross-links: [[scaled-attention]] ↔ [[transformer-architecture]] 
-  (co-mentioned in 3 sources).
-
-Want to file follow-up notes for any of these?
-```
-
----
-
-## Working with multiple projects
-
-You can have as many projects as you want (`ai-research`, `insurance`, `dissertation`). One is the "current" project — everything defaults to it. To switch, or to route a single operation to a specific project without switching, use flags.
-
-### Switch current project
-
-**Claude Code:**
-```
-/mb:load ai-research
-```
-
-**Any other IDE:**
-```
-Switch my mindbase to the ai-research project.
-```
-
-Writes `{"currentProjectId": "ai-research"}` to `~/mindbase-data/config.json`. Persists across sessions.
-
-### One-off routing (`-p` flag) — Claude Code
-
-Every command that takes a project supports `-p <project-id>` (or `--project <project-id>`):
-
-```bash
-/mb:contribute -p ai-agents "GPT-5 rumored 2026-Q4"
-/mb:build -p insurance
-/mb:ask -p ai-agents "my stance on agent marketplaces"
-/mb:lint -p dissertation
-/mb:daily-brief -p ai-agents --date 2026-07-05
-```
-
-The `-p` flag **does not change your current project**. It only routes this one operation.
-
-### One-off routing — other IDEs
-
-Just mention the project in natural language:
-
-```
-Add "GPT-5 rumored 2026-Q4" to my mindbase's ai-agents project.
-```
-
-The LLM passes `projectId: "ai-agents"` to the MCP tool call. Current project unchanged.
-
----
-
-## Web UI (optional companion)
-
-MindBase includes a browser-based app at `http://localhost:4321`. It's not required — the plugin/MCP path is the primary interface — but since 0.3/0.4 it stands on its own: write notes, run the AI operations, browse what the LLM has written.
+Since 0.3 the browser app stands on its own — write notes in a full WYSIWYG editor (`Cmd+N`), quick-capture from anywhere (`Cmd+I`), and run the AI operations with approval cards: `/contribute`, `/build`, `/lint`, `/research`. Live demos on the **[website](https://frankchu91.github.io/mindbase-llm-wiki/)**.
 
 <p align="center">
   <img alt="MindBase web UI — category tree on the left, the LLM-maintained context.md in the center, chat starters on the right" src="docs/assets/webui.png" width="920">
 </p>
 
-<p align="center">
-  <img alt="Cmd+I quick capture in dark mode — a thought typed into the Add-to-today modal, appended straight to your contributor file" src="docs/assets/webui-capture.png" width="920">
-</p>
-<p align="center"><em><code>Cmd+I</code> from anywhere — a thought goes straight into today's contributor file. Dark mode included.</em></p>
+**Free local models:** the setup wizard detects your hardware and installs what fits — `llama3.2:3b` (8GB), `qwen3:14b` (24GB+), or Meta's **Muse Glimmer 30B** (32GB+ Apple Silicon, Ollama ≥ 0.32.7). Measured guidance: qwen3:14b for interactive work (~30s), Glimmer for background lint/build — slower, but its findings quote the exact conflicting sentences. The model switcher on the chat composer flips between them in two clicks.
 
-### Start it
-
-```bash
-pnpm --filter @mindbase/server dev
-# then open http://localhost:4321
-```
-
-You'll see:
-- **LeftRail tree:** Contributors, Research, Logs, Artifacts, README, Context, Raw — organized as a file tree
-- **`Cmd+N` New note:** a full WYSIWYG editor (headings, GFM, links, `[[wikilink]]` autocomplete) writing into your contributor layer; each note carries a **wiki-status chip** (✨ Add to wiki → ✓ In wiki)
-- **`Cmd+I` AddEntry:** quick capture that appends to today's contributor file (works in any browser tab)
-- **Article view:** click any file to read it; edit inline
-- **Search (`Cmd+K`):** keyword search across your wiki
-- **Project switcher:** dropdown at the top
-
-Since 0.3.0 the Web UI also runs the core operations itself, with whatever
-LLM you configure in Settings (a cloud key **or the free local model** —
-see below):
-- **`/contribute`** in the chat composer — the AI reads your thought,
-  shows takeaways + a checkbox plan of wiki updates, and only writes what
-  you approve
-- **`/build`** (or the **Rebuild** button on the wiki home) — regenerates
-  `context.md` from unbuilt sources, with an automatic snapshot first
-- **✨ Process** on any note — sends that note through the same
-  contribute approval flow
-
-`/mb:lint` and `/mb:research` still live in your AI editor (UI versions
-are on the roadmap).
-
-### No API key? Use the free local model
-
-The setup wizard can run MindBase entirely on a **free local model** via
-[Ollama](https://ollama.com) — no subscription, no API key, no data
-leaving your machine. It detects your hardware (RAM/CPU), recommends the
-best model that fits (e.g. `llama3.2:3b` on 8GB, `qwen3:14b` on 32GB+),
-installs Ollama if needed, pulls the model with a progress bar, and
-verifies it with a real generation before finishing. Cloud models still
-give deeper synthesis; the local path is a real, working default.
-
-### Muse Glimmer support (Meta's open-weight 30B)
-
-MindBase supports [Muse Glimmer](https://ollama.com/library/muse-glimmer)
-as a first-class local model. On Apple Silicon Macs with **32GB+ RAM** the
-setup wizard offers it as the *best*-tier pick, and the composer's model
-badge switches between it and qwen3 in two clicks.
-
-**Inference engine: Ollama ≥ 0.32.7.** That's the engine MindBase
-integrates, and the version floor is real — older Ollama rejects the pull
-with a 412. Glimmer currently runs through Ollama's **MLX engine**, which
-means **Apple Silicon only** for now (NVIDIA/AMD support is upstream work
-in progress — non-Mac machines won't be offered the model until then).
-
-How to use it well (measured on an M2 Pro, 32GB):
-
-| Task | Use | Why |
-|---|---|---|
-| Chat, `/contribute`, interactive work | `qwen3:14b` | ~30s responses. Glimmer takes minutes: ~60 tok/s prompt eval on MLX + an always-on reasoning phase. |
-| `/lint`, big `/build`, `/research` | `muse-glimmer:30b-mlx` | Slower but noticeably more grounded — its health-check findings quote the exact conflicting sentences instead of gesturing at them. |
-
-Two Glimmer-specific behaviors MindBase handles for you:
-
-- **Thinking can't be disabled.** Ollama's `think: false` silently
-  *discards* Glimmer's reasoning tokens instead of skipping them — the
-  stream goes quiet for the whole think phase. MindBase leaves thinking
-  on for Glimmer and streams it live in the chat UI (🧠 …) so it never
-  looks frozen.
-- **It follows instructions to the letter.** Great for structured wiki
-  operations (its JSON never broke a schema in our testing); it needs
-  explicit rules for conversational edge cases, which MindBase's prompts
-  provide.
-
----
-
-## Feature matrix by editor
+<details>
+<summary><b>Feature matrix by editor</b></summary>
 
 | Feature | Claude Code | Cursor / Windsurf / Cline / Continue | Web UI |
 |---|---|---|---|
-| Slash commands (`/mb:*`) | ✅ | ❌ (use natural language) | ❌ |
+| Slash commands (`/mb:*`) | ✅ | ❌ (use natural language) | ✅ (`/contribute`, `/build`, `/lint`, `/research`) |
 | MCP tools directly | ✅ | ✅ | ❌ |
-| Karpathy 8-step ingest with sub-agents | ✅ | ⚠️ Manual (LLM won't auto-follow the ritual) | ❌ |
-| Auto-context via SessionStart hook | ✅ | ✅ (Cursor supports MCP hooks) | N/A |
-| Contribute short thought | ✅ | ✅ | ✅ (Cmd+I) |
-| Ingest PDF / URL / paste | ✅ | ✅ | ❌ |
-| Ask wiki with cited answers | ✅ | ✅ | ❌ (planned) |
-| Build (regenerate `context.md`) | ✅ | ✅ | ⚠️ (button dispatches, but LLM runs elsewhere) |
-| Health check / lint | ✅ | ✅ | ❌ (planned) |
-| Deep research (web + wiki) | ✅ | ✅ | ❌ |
-| Wiki tree browsing | ❌ | ❌ | ✅ |
-| Rich file editor | ❌ | ❌ | ✅ |
-| Cross-project search | ✅ | ✅ | ⚠️ (partial) |
-| `-p project-id` routing flag | ✅ | ⚠️ (via natural language) | N/A |
+| Karpathy 8-step ingest with approval | ✅ (sub-agents) | ⚠️ Manual via prompt | ✅ (approval cards) |
+| Contribute / ingest PDF & URL | ✅ | ✅ | ✅ (upload + ✨ Process) |
+| Ask wiki with cited answers | ✅ | ✅ | ✅ |
+| Build / health check | ✅ | ✅ | ✅ |
+| Wiki tree browsing + rich editor | ❌ | ❌ | ✅ |
+| `-p project-id` routing | ✅ | ⚠️ natural language | ✅ (switcher) |
 
-**Legend:** ✅ works · ⚠️ partial / experimental · ❌ not yet
-
----
+</details>
 
 ## Where your data lives
 
-Everything is under `~/mindbase-data/` (override with `MINDBASE_DATA_DIR` env var).
+Everything is plain markdown under `~/mindbase-data/` (override: `MINDBASE_DATA_DIR`):
 
 ```
-~/mindbase-data/
-├── config.json                       # { currentProjectId, ... }
-└── projects/
-    └── my-research/
-        ├── README.md                 # Ops manual — you edit, LLM reads
-        ├── context.md                # Synthesized truth — LLM writes, you read
-        ├── index.yaml                # Auto-generated catalog
-        ├── sources/
-        │   ├── contributors/         # Your dated entries (append-only)
-        │   │   └── <you>/
-        │   │       └── 2026-07-11.md
-        │   ├── research/             # LLM-authored wiki pages
-        │   │   └── attention-mechanism.md
-        │   └── raw/                  # PDFs, HTML captures, binary sources
-        │       └── 2026-07-11/
-        │           └── paper.pdf
-        ├── logs/                     # Chronological operation log
-        │   └── 2026-07-11.md
-        ├── artifacts/                # Generated outputs
-        │   ├── briefs/               # Daily briefs
-        │   ├── exports/              # Bundle exports
-        │   └── attachments/          # Images pasted into notes
-        └── state/                    # LLM working state
-            └── builder/snapshots/    # context.md snapshots for rollback
+~/mindbase-data/projects/my-research/
+├── README.md                 # Ops manual — you edit, LLM reads
+├── context.md                # Synthesized truth — LLM writes, you approve
+├── index.yaml                # Auto-generated catalog
+├── sources/
+│   ├── contributors/<you>/   # Your dated entries + notes (append-only)
+│   ├── research/             # LLM-authored wiki pages
+│   └── raw/                  # PDFs, HTML captures
+├── logs/                     # Chronological operation log
+├── artifacts/                # Briefs, exports, lint findings
+└── state/builder/snapshots/  # context.md snapshots for rollback
 ```
 
-- **Everything is markdown.** Open in vim, VSCode, Obsidian — all work.
-- **No proprietary database.** No SQLite of secret sauce. What you see on disk is what MindBase knows.
-- **Git-friendly.** `cd ~/mindbase-data && git init` — every change auditable and rollbackable.
-- **Delete freely.** `rm -rf ~/mindbase-data/projects/foo` — nothing else needs cleanup.
-
-Backups: if you use iCloud / Time Machine / Dropbox, they'll pick this up automatically since it's just files.
-
----
+No proprietary database — what you see on disk is what MindBase knows. `git init` it, back it up with anything, delete a project with `rm -rf`.
 
 ## Architecture at a glance
 
 ```
-       ┌────────────────────────────────────────────┐
-       │  Your AI editor (any MCP-compatible):      │
-       │  Claude Code · Cursor · Windsurf · Cline · │
-       │  Continue.dev · Zed · Aider · ...          │
-       └───────────────────┬────────────────────────┘
-                           │  MCP (stdio JSON-RPC)
-                           ▼
-       ┌────────────────────────────────────────────┐
-       │       MindBase MCP server (Node.js)        │
-       │       — 49 tools: contribute, ask_wiki,    │
-       │         build, lint, research, ...         │
-       │       — reads/writes ~/mindbase-data/      │
-       └───────────────────┬────────────────────────┘
-                           │  file I/O
-                           ▼
-       ┌────────────────────────────────────────────┐
-       │        ~/mindbase-data/projects/…          │
-       │        Your markdown wiki on disk          │
-       └───────────────────┬────────────────────────┘
-                           │  read-only http
-                           ▼  (optional)
-       ┌────────────────────────────────────────────┐
-       │  Web UI at localhost:4321 (React + Vite)   │
-       │  Tree browser, editor, Cmd+I add-entry     │
-       └────────────────────────────────────────────┘
+ Claude Code / Cursor / any MCP editor          Web UI (npx mindbase-app)
+        │  MCP · sub-agents with                       │  /commands ·
+        │  per-agent tool allowlists                   │  approval cards
+        └─────────────┬─────────────────────────┬──────┘
+                      ▼                         ▼
+        ┌──────────────────────────────────────────────┐
+        │  One ops engine: gather context → single     │
+        │  constrained JSON completion → human         │
+        │  approval → whitelisted executors → log      │
+        └─────────────────────┬────────────────────────┘
+                              ▼
+              ~/mindbase-data/ · plain markdown
+              (LLM: Ollama local models or any cloud key)
 ```
 
-- **`packages/core`** — TypeScript strict library; storage adapters, LLM adapters, wiki index, graph, compile pipeline
-- **`apps/mcp`** — MCP server (JSON-RPC over stdio); tools + prompts; framework-agnostic
-- **`apps/server`** — Express server; serves the Web UI + `/api/tree/*` REST endpoints
-- **`apps/web`** — React 19 + Zustand + Tailwind frontend
-- **`apps/plugin`** — Claude Code plugin bundle (slash commands + sub-agents + hooks + bundled MCP server)
+Monorepo: `packages/core` (TS strict library) · `apps/mcp` (49-tool MCP server) · `apps/server` + `apps/web` (Express + React UI) · `apps/app` (npx launcher) · `apps/plugin` (Claude Code bundle).
 
----
+## Docs & help
 
-## Troubleshooting
-
-### "MCP server not connected"
-
-Cause: malformed config JSON, or the server binary can't start.
-
-Fix:
-1. Run it manually: `npx -y mindbase-mcp < /dev/null` — should print `[mindbase-mcp] connected · dataDir=…` on stderr and exit 0.
-2. If that works, the issue is in your editor's config (typo, wrong file, trailing comma).
-3. Claude Code plugin users: verify the bundle exists — `ls /path/to/mindbase/apps/plugin/mcp-server/dist/cli.js` — and rebuild with `pnpm --filter @mindbase/plugin build` if missing.
-4. Restart your editor after fixing config.
-
-### "No current project"
-
-Cause: You haven't run `/mb:init` yet, or `config.json` is missing `currentProjectId`.
-
-Fix:
-```
-/mb:init my-first-project
-```
-
-Or manually: `echo '{"currentProjectId": "my-project"}' > ~/mindbase-data/config.json`
-
-### "V1_LAYOUT_UNSUPPORTED"
-
-Cause: you have a legacy v1 project directory (from before the 2026-06 refactor).
-
-Fix (Claude Code only):
-```
-/mb:migrate --project <legacy-project-name>
-```
-
-Or delete it and start fresh: `rm -rf ~/mindbase-data/projects/<legacy-project-name>` then `/mb:init`.
-
-### Tools don't show in autocomplete
-
-Cause: MCP handshake didn't complete.
-
-Fix: Restart your editor. Check that no other MCP server is failing (a crash in one can block others in some clients).
-
-### The LLM in Cursor/Windsurf ignores my "add to mindbase" request
-
-Cause: the LLM didn't recognize the intent as a tool call opportunity.
-
-Fix: Add the `.cursorrules` block from the [Cursor](#cursor) section. Being explicit ("call mindbase_contribute with text=...") works too.
-
-### "/api/counts 404" in Web UI
-
-Cause: a pre-existing server-side route gap. Non-blocking — some tab count badges show 0 until fixed.
-
-Fix: known issue, coming in the next patch release. Track it on the [issues page](https://github.com/frankchu91/mindbase/issues).
-
-### More issues
-
-Open a GitHub issue: [github.com/frankchu91/mindbase/issues](https://github.com/frankchu91/mindbase/issues)
-
----
+- **[Guide](docs/guide.md)** — first project, the four daily workflows, multi-project routing, troubleshooting
+- **[Website](https://frankchu91.github.io/mindbase-llm-wiki/)** — live demos
+- **[CHANGELOG](CHANGELOG.md)** · **[Issues](https://github.com/frankchu91/mindbase-llm-wiki/issues)** — I reply to every issue same-day during beta
+- **The idea:** [Karpathy's LLM Wiki gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
 
 ## Roadmap
 
-**Now (2026-Q3 beta):**
-- Multi-editor MCP support ✅
-- Karpathy 8-step ingest via sub-agents (Claude Code) ✅
-- Cross-project routing (`-p` flag) ✅
-- Web UI tree browser + Cmd+I add-entry ✅
-- Wiki v2 layout ✅
+**Next:** browser extension for one-click page capture · audio input via Whisper · unified meta-tool for Cursor/Windsurf slash-like UX.
+**Later:** team projects with human-in-the-loop review · audio digests · desktop app · mobile capture.
 
-**Next (Q4):**
-- Web UI `Ask` panel (skip Claude Code roundtrip for queries)
-- Web UI `Lint` cards (visual health check inbox)
-- Audio input via Whisper (`/mb:contribute --audio recording.m4a`)
-- Browser extension for one-click "save this page to MindBase"
-- Anthropic marketplace listing (`/plugin install mindbase@mindbase-official`)
-- `mindbase_command` unified meta-tool (slash-like UX in Cursor/Windsurf)
+## Feedback
 
-**Later:**
-- Team brain (multi-contributor projects with human-in-the-loop review)
-- Audio Overview (NotebookLM-style podcast digests)
-- Marp slide-deck answers
-- Tauri desktop app (one-click install for non-technical users)
-- Mobile quick-capture apps
-
----
-
-## Beta feedback
-
-I'm running MindBase as a private beta through 2026-Q4. If you're using it:
-
-- **Bug reports / feature requests:** [github.com/frankchu91/mindbase/issues](https://github.com/frankchu91/mindbase/issues)
-- **Direct feedback / 30-min interview:** [haobing0304@gmail.com](mailto:haobing0304@gmail.com)
-
-I read every issue and reply within 24 hours during beta. If you tried MindBase and gave up — please tell me why. The blockers you hit are gold.
-
-**What kind of feedback is most useful?**
-- What happened the first minute after install?
-- Which command / workflow do you use every day, if any?
-- Which command / workflow did you try once and never again?
-- What did you expect to work that didn't?
-- What broke your trust in the LLM's synthesis?
-- Would you pay for this? What's the shape of the pricing that would feel fair?
-
----
+Beta through 2026-Q4. If you tried MindBase and gave up — please tell me why: [issues](https://github.com/frankchu91/mindbase-llm-wiki/issues) or [haobing0304@gmail.com](mailto:haobing0304@gmail.com). The blockers you hit are gold.
 
 ## License
 
