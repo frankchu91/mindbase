@@ -5,6 +5,7 @@
 [![CI](https://github.com/frankchu91/mindbase-llm-wiki/actions/workflows/ci.yml/badge.svg)](https://github.com/frankchu91/mindbase-llm-wiki/actions)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Website](https://img.shields.io/badge/website-live%20demos-blue)](https://frankchu91.github.io/mindbase-llm-wiki/)
+[![Glama score](https://glama.ai/mcp/servers/frankchu91/mindbase/badges/score.svg)](https://glama.ai/mcp/servers/frankchu91/mindbase)
 
 > **An open-source implementation of Andrej Karpathy's LLM Wiki idea: an AI that builds and maintains a wiki from your sources.** Not RAG-in-a-vector-DB. A real markdown wiki on your disk, that an LLM gardens for you between conversations.
 
